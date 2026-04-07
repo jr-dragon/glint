@@ -4,8 +4,25 @@
   // Set this to today's date
   "compatibility_date": "2026-04-07",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry",
+  "main": "src/entry.server.ts",
   "observability": {
     "enabled": true,
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "glint-db",
+      "database_id": "0c12bea2-d7b0-4c49-bb06-47bd66e3e8c8",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "STORAGE",
+      "bucket_name": "glint-storage",
+    },
+  ],
+  "vars": {
+    "CF_ACCESS_TEAM_DOMAIN": "",
+    "CF_ACCESS_POLICY_AUD": "",
   },
 }
