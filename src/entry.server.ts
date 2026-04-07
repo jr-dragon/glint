@@ -9,7 +9,7 @@ import { verifyAccessJwt } from "#/lib/cf-access";
 const startFetch = createStartHandler(defaultStreamHandler);
 
 function isDev() {
-	return !env.CF_ACCESS_TEAM_DOMAIN || !env.CF_ACCESS_POLICY_AUD;
+	return import.meta.env.DEV;
 }
 
 export default createServerEntry({
