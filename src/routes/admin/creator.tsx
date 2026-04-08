@@ -3,10 +3,8 @@ import { createServerFn, useServerFn } from "@tanstack/react-start";
 import {
 	ChevronDownIcon,
 	EditIcon,
-	LinkIcon,
 	PlusIcon,
 	Trash2Icon,
-	UnlinkIcon,
 	UsersIcon,
 } from "lucide-react";
 import { Accordion as AccordionPrimitive } from "radix-ui";
@@ -32,6 +30,7 @@ import {
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
+
 import {
 	Carousel,
 	CarouselContent,
@@ -57,14 +56,12 @@ import {
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import {
-	bindObjectToCreator,
 	type CategoryObject,
 	type CreatorRecord,
 	createCreator,
 	deleteCreator,
 	listCreators,
 	listFiles,
-	unbindObjectFromCreator,
 	updateCreator,
 } from "#/lib/storage";
 
@@ -109,18 +106,6 @@ const deleteCreatorFn = createServerFn({ method: "POST" })
 		await deleteCreator(data.id);
 	});
 
-const bindObjectFn = createServerFn({ method: "POST" })
-	.inputValidator(z.object({ objectId: z.string(), creatorId: z.string() }))
-	.handler(async ({ data }) => {
-		await bindObjectToCreator(data.objectId, data.creatorId);
-	});
-
-const unbindObjectFn = createServerFn({ method: "POST" })
-	.inputValidator(z.object({ objectId: z.string(), creatorId: z.string() }))
-	.handler(async ({ data }) => {
-		await unbindObjectFromCreator(data.objectId, data.creatorId);
-	});
-
 // --- Route ---
 
 const searchSchema = z.object({
@@ -144,13 +129,7 @@ interface MetadataFields {
 
 // --- Components ---
 
-function ObjectCarousel({
-	objects,
-	action,
-}: {
-	objects: CategoryObject[];
-	action: (obj: CategoryObject) => React.ReactNode;
-}) {
+function ObjectCarousel({ objects }: { objects: CategoryObject[] }) {
 	return (
 		<Carousel opts={{ align: "start" }} className="mx-auto w-full">
 			<CarouselContent>
@@ -159,7 +138,7 @@ function ObjectCarousel({
 						key={obj.id}
 						className="basis-1/2 sm:basis-1/3 lg:basis-1/4"
 					>
-						<Card className="group overflow-hidden">
+						<Card className="overflow-hidden">
 							<div className="aspect-video w-full">
 								<FilePreview
 									path={obj.path}
@@ -167,11 +146,10 @@ function ObjectCarousel({
 									alt={obj.metadata.originalName}
 								/>
 							</div>
-							<div className="flex items-center justify-between gap-2 px-3 py-2">
+							<div className="px-3 py-2">
 								<span className="truncate text-sm font-medium">
 									{obj.metadata.originalName}
 								</span>
-								{action(obj)}
 							</div>
 						</Card>
 					</CarouselItem>
@@ -198,8 +176,6 @@ function CreatorPage() {
 	const createCrt = useServerFn(createCreatorFn);
 	const updateCrt = useServerFn(updateCreatorFn);
 	const deleteCrt = useServerFn(deleteCreatorFn);
-	const bindObj = useServerFn(bindObjectFn);
-	const unbindObj = useServerFn(unbindObjectFn);
 
 	const { creators, objects } = loaderData;
 
@@ -256,24 +232,6 @@ function CreatorPage() {
 			router.invalidate();
 		} catch {
 			toast.error("創作者刪除失敗");
-		}
-	}
-
-	async function handleBind(creatorId: string, objectId: string) {
-		try {
-			await bindObj({ data: { objectId, creatorId } });
-			router.invalidate();
-		} catch {
-			toast.error("綁定失敗");
-		}
-	}
-
-	async function handleUnbind(creatorId: string, objectId: string) {
-		try {
-			await unbindObj({ data: { objectId, creatorId } });
-			router.invalidate();
-		} catch {
-			toast.error("解除綁定失敗");
 		}
 	}
 
@@ -383,76 +341,14 @@ function CreatorPage() {
 									</Button>
 								</AccordionPrimitive.Header>
 								<AccordionContent>
-									<div className="grid gap-6 px-2">
-										{/* Bound objects */}
-										<div>
-											<h4 className="mb-3 text-sm font-medium">
-												已綁定（{bound.length}）
-											</h4>
-											{bound.length === 0 ? (
-												<p className="text-sm text-muted-foreground">
-													尚未綁定任何物件
-												</p>
-											) : (
-												<ObjectCarousel
-													objects={bound}
-													action={(obj) => (
-														<Button
-															variant="ghost"
-															size="icon-xs"
-															className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-															onClick={() => handleUnbind(creator.id, obj.id)}
-															title="解除綁定"
-														>
-															<UnlinkIcon className="size-3.5 text-destructive" />
-														</Button>
-													)}
-												/>
-											)}
-										</div>
-
-										{/* Unbound objects */}
-										<div>
-											<h4 className="mb-3 text-sm font-medium">
-												所有物件（選取以綁定）
-											</h4>
-											{objects.length === 0 ? (
-												<p className="text-sm text-muted-foreground">
-													尚無可綁定的物件
-												</p>
-											) : (
-												<ObjectCarousel
-													objects={objects.map((o) => ({
-														id: o.id,
-														path: o.path,
-														metadata: o.metadata as CategoryObject["metadata"],
-													}))}
-													action={(obj) => {
-														const alreadyBound = bound.some(
-															(b) => b.id === obj.id,
-														);
-														if (alreadyBound) {
-															return (
-																<Badge variant="outline" className="text-xs">
-																	已綁定
-																</Badge>
-															);
-														}
-														return (
-															<Button
-																variant="ghost"
-																size="icon-xs"
-																className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-																onClick={() => handleBind(creator.id, obj.id)}
-																title="綁定至此創作者"
-															>
-																<LinkIcon className="size-3.5" />
-															</Button>
-														);
-													}}
-												/>
-											)}
-										</div>
+									<div className="px-2">
+										{bound.length === 0 ? (
+											<p className="text-sm text-muted-foreground">
+												尚未綁定任何物件
+											</p>
+										) : (
+											<ObjectCarousel objects={bound} />
+										)}
 									</div>
 								</AccordionContent>
 							</AccordionItem>

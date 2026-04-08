@@ -4,10 +4,8 @@ import {
 	ChevronDownIcon,
 	EditIcon,
 	FolderTreeIcon,
-	LinkIcon,
 	PlusIcon,
 	Trash2Icon,
-	UnlinkIcon,
 } from "lucide-react";
 import { Accordion as AccordionPrimitive } from "radix-ui";
 import { useState } from "react";
@@ -58,14 +56,12 @@ import {
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import {
-	bindObjectToCategory,
 	type CategoryObject,
 	type CategoryRecord,
 	createCategory,
 	deleteCategory,
 	listAllCategoryObjects,
 	listCategories,
-	unbindObjectFromCategory,
 	updateCategory,
 } from "#/lib/storage";
 
@@ -98,18 +94,6 @@ const deleteCategoryFn = createServerFn({ method: "POST" })
 		await deleteCategory(data.id);
 	});
 
-const bindObjectFn = createServerFn({ method: "POST" })
-	.inputValidator(z.object({ objectId: z.string(), categoryId: z.string() }))
-	.handler(async ({ data }) => {
-		await bindObjectToCategory(data.objectId, data.categoryId);
-	});
-
-const unbindObjectFn = createServerFn({ method: "POST" })
-	.inputValidator(z.object({ objectId: z.string(), categoryId: z.string() }))
-	.handler(async ({ data }) => {
-		await unbindObjectFromCategory(data.objectId, data.categoryId);
-	});
-
 // --- Route ---
 
 const searchSchema = z.object({
@@ -125,13 +109,7 @@ export const Route = createFileRoute("/admin/category")({
 
 // --- Components ---
 
-function ObjectCarousel({
-	objects,
-	action,
-}: {
-	objects: CategoryObject[];
-	action: (obj: CategoryObject) => React.ReactNode;
-}) {
+function ObjectCarousel({ objects }: { objects: CategoryObject[] }) {
 	return (
 		<Carousel opts={{ align: "start" }} className="mx-auto w-full">
 			<CarouselContent>
@@ -140,7 +118,7 @@ function ObjectCarousel({
 						key={obj.id}
 						className="basis-1/2 sm:basis-1/3 lg:basis-1/4"
 					>
-						<Card className="group overflow-hidden">
+						<Card className="overflow-hidden">
 							<div className="aspect-video w-full">
 								<FilePreview
 									path={obj.path}
@@ -148,11 +126,10 @@ function ObjectCarousel({
 									alt={obj.metadata.originalName}
 								/>
 							</div>
-							<div className="flex items-center justify-between gap-2 px-3 py-2">
+							<div className="px-3 py-2">
 								<span className="truncate text-sm font-medium">
 									{obj.metadata.originalName}
 								</span>
-								{action(obj)}
 							</div>
 						</Card>
 					</CarouselItem>
@@ -178,10 +155,8 @@ function CategoryPage() {
 	const createCat = useServerFn(createCategoryFn);
 	const updateCat = useServerFn(updateCategoryFn);
 	const deleteCat = useServerFn(deleteCategoryFn);
-	const bindObj = useServerFn(bindObjectFn);
-	const unbindObj = useServerFn(unbindObjectFn);
 
-	const { categories, uncategorizedObjects, categoryObjects } = loaderData;
+	const { categories, categoryObjects } = loaderData;
 
 	function openCreate() {
 		setEditTarget(null);
@@ -223,24 +198,6 @@ function CategoryPage() {
 		}
 	}
 
-	async function handleBind(categoryId: string, objectId: string) {
-		try {
-			await bindObj({ data: { objectId, categoryId } });
-			router.invalidate();
-		} catch {
-			toast.error("綁定失敗");
-		}
-	}
-
-	async function handleUnbind(categoryId: string, objectId: string) {
-		try {
-			await unbindObj({ data: { objectId, categoryId } });
-			router.invalidate();
-		} catch {
-			toast.error("解除綁定失敗");
-		}
-	}
-
 	return (
 		<>
 			<div className="mb-6 flex items-center justify-between">
@@ -251,7 +208,7 @@ function CategoryPage() {
 				</Button>
 			</div>
 
-			{categories.length === 0 && uncategorizedObjects.length === 0 ? (
+			{categories.length === 0 ? (
 				<Empty className="border">
 					<FolderTreeIcon className="size-10 text-muted-foreground" />
 					<EmptyHeader>
@@ -295,60 +252,14 @@ function CategoryPage() {
 									</Button>
 								</AccordionPrimitive.Header>
 								<AccordionContent>
-									<div className="grid gap-6 px-2">
-										{/* Bound objects */}
-										<div>
-											<h4 className="mb-3 text-sm font-medium">
-												已分類（{bound.length}）
-											</h4>
-											{bound.length === 0 ? (
-												<p className="text-sm text-muted-foreground">
-													尚未綁定任何物件
-												</p>
-											) : (
-												<ObjectCarousel
-													objects={bound}
-													action={(obj) => (
-														<Button
-															variant="ghost"
-															size="icon-xs"
-															className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-															onClick={() => handleUnbind(cat.id, obj.id)}
-															title="解除綁定"
-														>
-															<UnlinkIcon className="size-3.5 text-destructive" />
-														</Button>
-													)}
-												/>
-											)}
-										</div>
-
-										{/* Unbound objects */}
-										<div>
-											<h4 className="mb-3 text-sm font-medium">
-												未分類（{uncategorizedObjects.length}）
-											</h4>
-											{uncategorizedObjects.length === 0 ? (
-												<p className="text-sm text-muted-foreground">
-													所有物件皆已分類
-												</p>
-											) : (
-												<ObjectCarousel
-													objects={uncategorizedObjects as CategoryObject[]}
-													action={(obj) => (
-														<Button
-															variant="ghost"
-															size="icon-xs"
-															className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-															onClick={() => handleBind(cat.id, obj.id)}
-															title="綁定至此分類"
-														>
-															<LinkIcon className="size-3.5" />
-														</Button>
-													)}
-												/>
-											)}
-										</div>
+									<div className="px-2">
+										{bound.length === 0 ? (
+											<p className="text-sm text-muted-foreground">
+												尚未綁定任何物件
+											</p>
+										) : (
+											<ObjectCarousel objects={bound} />
+										)}
 									</div>
 								</AccordionContent>
 							</AccordionItem>
