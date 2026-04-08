@@ -114,18 +114,14 @@ export const Route = createFileRoute("/admin/category")({
 	loader: () => listCategoriesFn(),
 });
 
-// --- Types ---
-
-type ObjectRecord = CategoryObject;
-
 // --- Components ---
 
 function ObjectCarousel({
 	objects,
 	action,
 }: {
-	objects: ObjectRecord[];
-	action: (obj: ObjectRecord) => React.ReactNode;
+	objects: CategoryObject[];
+	action: (obj: CategoryObject) => React.ReactNode;
 }) {
 	return (
 		<Carousel opts={{ align: "start" }} className="mx-auto w-full">
@@ -259,7 +255,7 @@ function CategoryPage() {
 			) : (
 				<Accordion type="single" collapsible className="rounded-xl border px-4">
 					{categories.map((cat) => {
-						const bound = (categoryObjects[cat.id] ?? []) as ObjectRecord[];
+						const bound = (categoryObjects[cat.id] ?? []) as CategoryObject[];
 						return (
 							<AccordionItem key={cat.id} value={cat.id}>
 								<AccordionPrimitive.Header className="flex items-center">
@@ -327,7 +323,7 @@ function CategoryPage() {
 												</p>
 											) : (
 												<ObjectCarousel
-													objects={uncategorizedObjects as ObjectRecord[]}
+													objects={uncategorizedObjects as CategoryObject[]}
 													action={(obj) => (
 														<Button
 															variant="ghost"
