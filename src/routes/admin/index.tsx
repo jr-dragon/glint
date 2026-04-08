@@ -5,8 +5,10 @@ import {
 	FileIcon,
 	LoaderCircleIcon,
 	PencilIcon,
+	PlusIcon,
 	Trash2Icon,
 	UploadCloudIcon,
+	UserPlusIcon,
 	XIcon,
 } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
@@ -25,21 +27,43 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from "#/components/ui/command";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "#/components/ui/popover";
 import { TagsInput } from "#/components/ui/tags-input";
 import { CATEGORY_PREFIX, CREATOR_PREFIX } from "#/lib/constants";
 import {
 	addTagsToFile,
+	bindObjectToCreator,
+	type CreatorRecord,
+	createCreator,
 	deleteFile,
+	listCreators,
 	listFiles,
 	removeTagFromFile,
 	renameFile,
+	unbindObjectFromCreator,
 	uploadFile,
 } from "#/lib/storage";
 
 const listFilesFn = createServerFn({ method: "GET" })
 	.inputValidator(z.object({ page: z.number().int().min(1) }))
 	.handler(async ({ data }) => {
-		return listFiles(data.page);
+		const [files, creators] = await Promise.all([
+			listFiles(data.page),
+			listCreators(),
+		]);
+		return { ...files, creators };
 	});
 
 const uploadFileFn = createServerFn({ method: "POST" })
@@ -78,6 +102,24 @@ const removeTagFn = createServerFn({ method: "POST" })
 		await removeTagFromFile(data.fileId, data.tagName);
 	});
 
+const createCreatorFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ name: z.string().min(1) }))
+	.handler(async ({ data }) => {
+		return createCreator(data.name);
+	});
+
+const bindCreatorFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ objectId: z.string(), creatorId: z.string() }))
+	.handler(async ({ data }) => {
+		await bindObjectToCreator(data.objectId, data.creatorId);
+	});
+
+const unbindCreatorFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ objectId: z.string(), creatorId: z.string() }))
+	.handler(async ({ data }) => {
+		await unbindObjectFromCreator(data.objectId, data.creatorId);
+	});
+
 const searchSchema = z.object({
 	page: z.coerce.number().int().min(1).catch(1),
 });
@@ -95,13 +137,6 @@ interface TagRecord {
 	metadata?: unknown;
 }
 
-interface CreatorInfo {
-	name: string;
-	url?: string;
-	twitter?: string;
-	pixiv?: string;
-}
-
 interface FileRecord {
 	id: string;
 	path: string;
@@ -113,20 +148,6 @@ interface FileRecord {
 function getCategoryName(tags: TagRecord[]): string | null {
 	const tag = tags.find((t) => t.name.startsWith(CATEGORY_PREFIX));
 	return tag ? tag.name.slice(CATEGORY_PREFIX.length) : null;
-}
-
-function getCreators(tags: TagRecord[]): CreatorInfo[] {
-	return tags
-		.filter((t) => t.name.startsWith(CREATOR_PREFIX))
-		.map((t) => {
-			const meta = (t.metadata ?? {}) as Record<string, string>;
-			return {
-				name: t.name.slice(CREATOR_PREFIX.length),
-				url: meta.url,
-				twitter: meta.twitter,
-				pixiv: meta.pixiv,
-			};
-		});
 }
 
 function displayTagName(name: string) {
@@ -274,6 +295,180 @@ function TagEditor({
 	);
 }
 
+function CreatorEditor({
+	file,
+	allCreators,
+	onCreatorsChange,
+}: {
+	file: FileRecord;
+	allCreators: CreatorRecord[];
+	onCreatorsChange: (fileId: string, tags: TagRecord[]) => void;
+}) {
+	const router = useRouter();
+	const [open, setOpen] = useState(false);
+	const [search, setSearch] = useState("");
+	const createCrt = useServerFn(createCreatorFn);
+	const bindCreator = useServerFn(bindCreatorFn);
+	const unbindCreator = useServerFn(unbindCreatorFn);
+
+	const boundCreatorTags = file.tags.filter((t) =>
+		t.name.startsWith(CREATOR_PREFIX),
+	);
+	const boundCreatorIds = new Set(boundCreatorTags.map((t) => t.id));
+
+	const availableCreators = allCreators.filter(
+		(c) => !boundCreatorIds.has(c.id),
+	);
+
+	const trimmed = search.trim();
+	const hasExactMatch = allCreators.some(
+		(c) => c.name.toLowerCase() === trimmed.toLowerCase(),
+	);
+	const showCreate = trimmed.length > 0 && !hasExactMatch;
+
+	async function handleBind(creator: CreatorRecord) {
+		onCreatorsChange(file.id, [
+			...file.tags,
+			{ id: creator.id, name: creator.value, metadata: creator.metadata },
+		]);
+		setOpen(false);
+		setSearch("");
+		await bindCreator({ data: { objectId: file.id, creatorId: creator.id } });
+		router.invalidate();
+	}
+
+	async function handleCreate() {
+		if (!trimmed) return;
+		setOpen(false);
+		setSearch("");
+		const created = await createCrt({ data: { name: trimmed } });
+		onCreatorsChange(file.id, [
+			...file.tags,
+			{ id: created.id, name: created.value, metadata: created.metadata },
+		]);
+		await bindCreator({
+			data: { objectId: file.id, creatorId: created.id },
+		});
+		router.invalidate();
+	}
+
+	async function handleUnbind(tag: TagRecord) {
+		onCreatorsChange(
+			file.id,
+			file.tags.filter((t) => t.id !== tag.id),
+		);
+		await unbindCreator({ data: { objectId: file.id, creatorId: tag.id } });
+		router.invalidate();
+	}
+
+	return (
+		<div className="flex flex-wrap items-center gap-1.5 border-t px-3 py-2">
+			{boundCreatorTags.map((tag) => {
+				const meta = (tag.metadata ?? {}) as Record<string, string>;
+				return (
+					<Badge key={tag.id} variant="outline" className="gap-1 pr-1">
+						<span className="text-xs">
+							@{tag.name.slice(CREATOR_PREFIX.length)}
+						</span>
+						{meta.url && (
+							<a
+								href={meta.url}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-xs opacity-60 hover:opacity-100"
+								title="Website"
+							>
+								🔗
+							</a>
+						)}
+						{meta.twitter && (
+							<a
+								href={`https://x.com/${meta.twitter}`}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-xs opacity-60 hover:opacity-100"
+								title={`@${meta.twitter}`}
+							>
+								𝕏
+							</a>
+						)}
+						{meta.pixiv && (
+							<a
+								href={`https://www.pixiv.net/users/${meta.pixiv}`}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-xs opacity-60 hover:opacity-100"
+								title="Pixiv"
+							>
+								P
+							</a>
+						)}
+						<button
+							type="button"
+							className="rounded-sm opacity-60 hover:opacity-100"
+							onClick={() => handleUnbind(tag)}
+						>
+							<XIcon className="size-3" />
+						</button>
+					</Badge>
+				);
+			})}
+			<Popover
+				open={open}
+				onOpenChange={(v) => {
+					setOpen(v);
+					if (!v) setSearch("");
+				}}
+			>
+				<PopoverTrigger asChild>
+					<Button variant="ghost" size="icon-xs" title="新增創作者">
+						<UserPlusIcon className="size-3.5 text-muted-foreground" />
+					</Button>
+				</PopoverTrigger>
+				<PopoverContent className="w-52 p-0" align="start">
+					<Command shouldFilter={false}>
+						<CommandInput
+							placeholder="搜尋創作者…"
+							value={search}
+							onValueChange={setSearch}
+						/>
+						<CommandList>
+							{availableCreators.filter(
+								(c) =>
+									!trimmed ||
+									c.name.toLowerCase().includes(trimmed.toLowerCase()),
+							).length === 0 &&
+								!showCreate && <CommandEmpty>找不到創作者</CommandEmpty>}
+							<CommandGroup>
+								{availableCreators
+									.filter(
+										(c) =>
+											!trimmed ||
+											c.name.toLowerCase().includes(trimmed.toLowerCase()),
+									)
+									.map((creator) => (
+										<CommandItem
+											key={creator.id}
+											onSelect={() => handleBind(creator)}
+										>
+											@{creator.name}
+										</CommandItem>
+									))}
+								{showCreate && (
+									<CommandItem onSelect={handleCreate}>
+										<PlusIcon className="size-3.5" />
+										建立「{trimmed}」
+									</CommandItem>
+								)}
+							</CommandGroup>
+						</CommandList>
+					</Command>
+				</PopoverContent>
+			</Popover>
+		</div>
+	);
+}
+
 function toFileRecords(
 	items: Awaited<ReturnType<typeof listFiles>>["items"],
 ): FileRecord[] {
@@ -290,7 +485,7 @@ function toFileRecords(
 }
 
 function AdminPage() {
-	const { items: loaderItems, total } = Route.useLoaderData();
+	const { items: loaderItems, total, creators } = Route.useLoaderData();
 	const { page } = Route.useSearch();
 	const totalPages = Math.ceil(total / 12);
 	const [files, setFiles] = useState(() => toFileRecords(loaderItems));
@@ -422,7 +617,6 @@ function AdminPage() {
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{files.map((file) => {
 						const categoryName = getCategoryName(file.tags);
-						const creators = getCreators(file.tags);
 						return (
 							<div
 								key={file.id}
@@ -464,51 +658,6 @@ function AdminPage() {
 												{new Date(file.created_at).toLocaleDateString()}
 											</span>
 										</div>
-										{creators.length > 0 && (
-											<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-												{creators.map((c) => (
-													<span
-														key={c.name}
-														className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-													>
-														<span>@{c.name}</span>
-														{c.url && (
-															<a
-																href={c.url}
-																target="_blank"
-																rel="noopener noreferrer"
-																className="hover:text-foreground"
-																title="Website"
-															>
-																🔗
-															</a>
-														)}
-														{c.twitter && (
-															<a
-																href={`https://x.com/${c.twitter}`}
-																target="_blank"
-																rel="noopener noreferrer"
-																className="hover:text-foreground"
-																title={`@${c.twitter}`}
-															>
-																𝕏
-															</a>
-														)}
-														{c.pixiv && (
-															<a
-																href={`https://www.pixiv.net/users/${c.pixiv}`}
-																target="_blank"
-																rel="noopener noreferrer"
-																className="hover:text-foreground"
-																title="Pixiv"
-															>
-																P
-															</a>
-														)}
-													</span>
-												))}
-											</div>
-										)}
 									</div>
 									<Button
 										variant="ghost"
@@ -520,6 +669,11 @@ function AdminPage() {
 									</Button>
 								</div>
 								<TagEditor file={file} onTagsChange={handleTagsChange} />
+								<CreatorEditor
+									file={file}
+									allCreators={creators}
+									onCreatorsChange={handleTagsChange}
+								/>
 							</div>
 						);
 					})}

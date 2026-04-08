@@ -77,7 +77,7 @@ const createCreatorFn = createServerFn({ method: "POST" })
 	.inputValidator(
 		z.object({
 			name: z.string().min(1),
-			metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+			metadata: z.record(z.string(), z.string()).nullable().optional(),
 		}),
 	)
 	.handler(async ({ data }) => {
@@ -89,7 +89,7 @@ const updateCreatorFn = createServerFn({ method: "POST" })
 		z.object({
 			id: z.string(),
 			name: z.string().min(1),
-			metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+			metadata: z.record(z.string(), z.string()).nullable().optional(),
 		}),
 	)
 	.handler(async ({ data }) => {
@@ -197,8 +197,8 @@ function CreatorPage() {
 
 	const { creators, objects } = loaderData;
 
-	function buildMetadata(): MetadataFields | null {
-		const meta: MetadataFields = {};
+	function buildMetadata(): Record<string, string> | null {
+		const meta: Record<string, string> = {};
 		if (formUrl.trim()) meta.url = formUrl.trim();
 		if (formTwitter.trim()) meta.twitter = formTwitter.trim();
 		if (formPixiv.trim()) meta.pixiv = formPixiv.trim();

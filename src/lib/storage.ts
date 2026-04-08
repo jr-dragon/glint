@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { uuidv7 } from "uuidv7";
+import type { Prisma } from "#/generated/prisma/client";
 import { CATEGORY_PREFIX, CREATOR_PREFIX } from "#/lib/constants";
 import { createPrismaClient } from "#/lib/db";
 
@@ -278,7 +279,7 @@ export interface CreatorRecord {
 	id: string;
 	name: string;
 	value: string;
-	metadata: Record<string, unknown> | null;
+	metadata: Record<string, string> | null;
 	objectCount: number;
 }
 
@@ -296,14 +297,14 @@ export async function listCreators(): Promise<CreatorRecord[]> {
 		id: tag.id,
 		name: tag.name.slice(CREATOR_PREFIX.length),
 		value: tag.name,
-		metadata: tag.metadata as Record<string, unknown> | null,
+		metadata: (tag.metadata as Record<string, string> | null) ?? null,
 		objectCount: tag.objects.length,
 	}));
 }
 
 export async function createCreator(
 	name: string,
-	metadata?: Record<string, unknown> | null,
+	metadata?: Record<string, string> | null,
 ): Promise<CreatorRecord> {
 	const db = createPrismaClient();
 	const tagName = `${CREATOR_PREFIX}${name}`;
@@ -314,7 +315,7 @@ export async function createCreator(
 		id: tag.id,
 		name,
 		value: tag.name,
-		metadata: (tag.metadata as Record<string, unknown> | null) ?? null,
+		metadata: (tag.metadata as Record<string, string> | null) ?? null,
 		objectCount: 0,
 	};
 }
@@ -322,13 +323,13 @@ export async function createCreator(
 export async function updateCreator(
 	id: string,
 	newName: string,
-	metadata?: Record<string, unknown> | null,
+	metadata?: Record<string, string> | null,
 ): Promise<CreatorRecord> {
 	const db = createPrismaClient();
 	const tagName = `${CREATOR_PREFIX}${newName}`;
-	const data: { name: string; metadata?: unknown } = { name: tagName };
+	const data: Prisma.TagUpdateInput = { name: tagName };
 	if (metadata !== undefined) {
-		data.metadata = metadata;
+		data.metadata = metadata ?? undefined;
 	}
 	const tag = await db.tag.update({ where: { id }, data });
 	const count = await db.object.count({
@@ -338,7 +339,7 @@ export async function updateCreator(
 		id: tag.id,
 		name: newName,
 		value: tag.name,
-		metadata: (tag.metadata as Record<string, unknown> | null) ?? null,
+		metadata: (tag.metadata as Record<string, string> | null) ?? null,
 		objectCount: count,
 	};
 }
