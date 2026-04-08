@@ -1,6 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn, useServerFn } from "@tanstack/react-start";
 import {
+	ChevronDownIcon,
 	EditIcon,
 	LinkIcon,
 	PlusIcon,
@@ -8,10 +9,16 @@ import {
 	UnlinkIcon,
 	UsersIcon,
 } from "lucide-react";
+import { Accordion as AccordionPrimitive } from "radix-ui";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod/v4";
 import { FilePreview } from "#/components/FilePreview";
+import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+} from "#/components/ui/accordion";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -187,7 +194,6 @@ function CreatorPage() {
 	const [formTwitter, setFormTwitter] = useState("");
 	const [formPixiv, setFormPixiv] = useState("");
 	const [deleteTarget, setDeleteTarget] = useState<CreatorRecord | null>(null);
-	const [bindTarget, setBindTarget] = useState<CreatorRecord | null>(null);
 
 	const createCrt = useServerFn(createCreatorFn);
 	const updateCrt = useServerFn(updateCreatorFn);
@@ -312,148 +318,147 @@ function CreatorPage() {
 					</Button>
 				</Empty>
 			) : (
-				<div className="grid gap-4">
+				<Accordion type="single" collapsible className="rounded-xl border px-4">
 					{creators.map((creator) => {
 						const bound = creatorBoundObjects[creator.id] ?? [];
 						const meta = (creator.metadata ?? {}) as MetadataFields;
 						return (
-							<Card key={creator.id} className="p-4">
-								<div className="mb-3 flex items-center gap-3">
-									<span className="font-medium">{creator.name}</span>
-									<Badge variant="secondary">{creator.objectCount}</Badge>
-									{meta.facebook && (
-										<a
-											href={meta.facebook}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="text-xs text-muted-foreground hover:underline"
-										>
-											Facebook
-										</a>
-									)}
-									{meta.twitter && (
-										<a
-											href={meta.twitter}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="text-xs text-muted-foreground hover:underline"
-										>
-											Twitter
-										</a>
-									)}
-									{meta.pixiv && (
-										<a
-											href={meta.pixiv}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="text-xs text-muted-foreground hover:underline"
-										>
-											Pixiv
-										</a>
-									)}
-									<div className="ml-auto flex items-center gap-1">
-										<Button
-											variant="ghost"
-											size="icon-xs"
-											onClick={() =>
-												setBindTarget(
-													bindTarget?.id === creator.id ? null : creator,
-												)
-											}
-											title="綁定物件"
-										>
-											<LinkIcon className="size-3.5" />
-										</Button>
-										<Button
-											variant="ghost"
-											size="icon-xs"
-											onClick={() => openEdit(creator)}
-											title="編輯"
-										>
-											<EditIcon className="size-3.5" />
-										</Button>
-										<Button
-											variant="ghost"
-											size="icon-xs"
-											onClick={() => setDeleteTarget(creator)}
-											title="刪除"
-										>
-											<Trash2Icon className="size-3.5 text-destructive" />
-										</Button>
-									</div>
-								</div>
-
-								{/* Bound objects */}
-								{bound.length > 0 && (
-									<div className="mb-3">
-										<h4 className="mb-2 text-sm font-medium">
-											已綁定（{bound.length}）
-										</h4>
-										<ObjectCarousel
-											objects={bound}
-											action={(obj) => (
-												<Button
-													variant="ghost"
-													size="icon-xs"
-													className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-													onClick={() => handleUnbind(creator.id, obj.id)}
-													title="解除綁定"
+							<AccordionItem key={creator.id} value={creator.id}>
+								<AccordionPrimitive.Header className="flex items-center">
+									<AccordionPrimitive.Trigger className="flex flex-1 items-start justify-between gap-4 rounded-md py-4 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [&[data-state=open]>svg]:rotate-180">
+										<div className="flex flex-1 items-center gap-3">
+											<span className="font-medium">{creator.name}</span>
+											<Badge variant="secondary">{creator.objectCount}</Badge>
+											{meta.facebook && (
+												<a
+													href={meta.facebook}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-xs text-muted-foreground hover:underline"
+													onClick={(e) => e.stopPropagation()}
 												>
-													<UnlinkIcon className="size-3.5 text-destructive" />
-												</Button>
+													Facebook
+												</a>
 											)}
-										/>
-									</div>
-								)}
-
-								{/* Bind panel */}
-								{bindTarget?.id === creator.id && (
-									<div>
-										<h4 className="mb-2 text-sm font-medium">
-											所有物件（選取以綁定）
-										</h4>
-										{objects.length === 0 ? (
-											<p className="text-sm text-muted-foreground">
-												尚無可綁定的物件
-											</p>
-										) : (
-											<ObjectCarousel
-												objects={objects.map((o) => ({
-													id: o.id,
-													path: o.path,
-													metadata: o.metadata as CategoryObject["metadata"],
-												}))}
-												action={(obj) => {
-													const alreadyBound = bound.some(
-														(b) => b.id === obj.id,
-													);
-													if (alreadyBound) {
-														return (
-															<Badge variant="outline" className="text-xs">
-																已綁定
-															</Badge>
-														);
-													}
-													return (
+											{meta.twitter && (
+												<a
+													href={meta.twitter}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-xs text-muted-foreground hover:underline"
+													onClick={(e) => e.stopPropagation()}
+												>
+													Twitter
+												</a>
+											)}
+											{meta.pixiv && (
+												<a
+													href={meta.pixiv}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-xs text-muted-foreground hover:underline"
+													onClick={(e) => e.stopPropagation()}
+												>
+													Pixiv
+												</a>
+											)}
+										</div>
+										<ChevronDownIcon className="pointer-events-none size-4 shrink-0 translate-y-0.5 text-muted-foreground transition-transform duration-200" />
+									</AccordionPrimitive.Trigger>
+									<Button
+										variant="ghost"
+										size="icon-xs"
+										onClick={() => openEdit(creator)}
+										title="編輯"
+									>
+										<EditIcon className="size-3.5" />
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon-xs"
+										onClick={() => setDeleteTarget(creator)}
+										title="刪除"
+									>
+										<Trash2Icon className="size-3.5 text-destructive" />
+									</Button>
+								</AccordionPrimitive.Header>
+								<AccordionContent>
+									<div className="grid gap-6 px-2">
+										{/* Bound objects */}
+										<div>
+											<h4 className="mb-3 text-sm font-medium">
+												已綁定（{bound.length}）
+											</h4>
+											{bound.length === 0 ? (
+												<p className="text-sm text-muted-foreground">
+													尚未綁定任何物件
+												</p>
+											) : (
+												<ObjectCarousel
+													objects={bound}
+													action={(obj) => (
 														<Button
 															variant="ghost"
 															size="icon-xs"
 															className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-															onClick={() => handleBind(creator.id, obj.id)}
-															title="綁定至此創作者"
+															onClick={() => handleUnbind(creator.id, obj.id)}
+															title="解除綁定"
 														>
-															<LinkIcon className="size-3.5" />
+															<UnlinkIcon className="size-3.5 text-destructive" />
 														</Button>
-													);
-												}}
-											/>
-										)}
+													)}
+												/>
+											)}
+										</div>
+
+										{/* Unbound objects */}
+										<div>
+											<h4 className="mb-3 text-sm font-medium">
+												所有物件（選取以綁定）
+											</h4>
+											{objects.length === 0 ? (
+												<p className="text-sm text-muted-foreground">
+													尚無可綁定的物件
+												</p>
+											) : (
+												<ObjectCarousel
+													objects={objects.map((o) => ({
+														id: o.id,
+														path: o.path,
+														metadata: o.metadata as CategoryObject["metadata"],
+													}))}
+													action={(obj) => {
+														const alreadyBound = bound.some(
+															(b) => b.id === obj.id,
+														);
+														if (alreadyBound) {
+															return (
+																<Badge variant="outline" className="text-xs">
+																	已綁定
+																</Badge>
+															);
+														}
+														return (
+															<Button
+																variant="ghost"
+																size="icon-xs"
+																className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+																onClick={() => handleBind(creator.id, obj.id)}
+																title="綁定至此創作者"
+															>
+																<LinkIcon className="size-3.5" />
+															</Button>
+														);
+													}}
+												/>
+											)}
+										</div>
 									</div>
-								)}
-							</Card>
+								</AccordionContent>
+							</AccordionItem>
 						);
 					})}
-				</div>
+				</Accordion>
 			)}
 
 			{/* Create / Edit Dialog */}
