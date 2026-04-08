@@ -214,18 +214,21 @@ export async function bindObjectToCategory(
 	categoryId: string,
 ): Promise<void> {
 	const db = createPrismaClient();
-	// Fetch current tags, keep non-category ones, replace category with new one
-	const obj = await db.object.findUniqueOrThrow({
-		where: { id: objectId },
-		select: { tags: { select: { id: true, name: true } } },
+	// Disconnect existing category tags, then connect the new one
+	const existingCategoryTags = await db.tag.findMany({
+		where: {
+			name: { startsWith: CATEGORY_PREFIX },
+			objects: { some: { id: objectId } },
+		},
+		select: { id: true },
 	});
-	const nonCategoryTagIds = obj.tags
-		.filter((t) => !t.name.startsWith(CATEGORY_PREFIX))
-		.map((t) => ({ id: t.id }));
 	await db.object.update({
 		where: { id: objectId },
 		data: {
-			tags: { set: [...nonCategoryTagIds, { id: categoryId }] },
+			tags: {
+				disconnect: existingCategoryTags.map((t) => ({ id: t.id })),
+				connect: { id: categoryId },
+			},
 		},
 	});
 }
