@@ -9,6 +9,7 @@ import {
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { z } from "zod/v4";
 import { FilePreview } from "#/components/FilePreview";
+import { PaginationBar } from "#/components/PaginationBar";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -31,9 +32,11 @@ import {
 	uploadFile,
 } from "#/lib/storage";
 
-const listFilesFn = createServerFn({ method: "GET" }).handler(async () => {
-	return listFiles();
-});
+const listFilesFn = createServerFn({ method: "GET" })
+	.inputValidator(z.object({ page: z.number().int().min(1) }))
+	.handler(async ({ data }) => {
+		return listFiles(data.page);
+	});
 
 const uploadFileFn = createServerFn({ method: "POST" })
 	.inputValidator((input: unknown) => {
@@ -65,9 +68,15 @@ const removeTagFn = createServerFn({ method: "POST" })
 		await removeTagFromFile(data.fileId, data.tagName);
 	});
 
+const searchSchema = z.object({
+	page: z.coerce.number().int().min(1).catch(1),
+});
+
 export const Route = createFileRoute("/admin/")({
 	component: AdminPage,
-	loader: () => listFilesFn(),
+	validateSearch: searchSchema,
+	loaderDeps: ({ search }) => ({ page: search.page }),
+	loader: ({ deps }) => listFilesFn({ data: { page: deps.page } }),
 });
 
 interface TagRecord {
@@ -162,13 +171,26 @@ function TagEditor({
 	);
 }
 
+function toFileRecords(
+	items: Awaited<ReturnType<typeof listFiles>>["items"],
+): FileRecord[] {
+	return items.map((item) => ({
+		...item,
+		metadata: item.metadata as FileRecord["metadata"],
+		created_at: String(item.created_at),
+		tags: item.tags.map((t) => ({ id: t.id, name: t.name })),
+	}));
+}
+
 function AdminPage() {
-	const loaderData = Route.useLoaderData() as FileRecord[];
-	const [files, setFiles] = useState<FileRecord[]>(loaderData);
+	const { items: loaderItems, total } = Route.useLoaderData();
+	const { page } = Route.useSearch();
+	const totalPages = Math.ceil(total / 12);
+	const [files, setFiles] = useState(() => toFileRecords(loaderItems));
 
 	useEffect(() => {
-		setFiles(loaderData);
-	}, [loaderData]);
+		setFiles(toFileRecords(loaderItems));
+	}, [loaderItems]);
 
 	const [dragging, setDragging] = useState(false);
 	const [uploading, setUploading] = useState(false);
@@ -336,6 +358,8 @@ function AdminPage() {
 					})}
 				</div>
 			)}
+
+			<PaginationBar page={page} totalPages={totalPages} />
 
 			{/* Delete Confirmation */}
 			<AlertDialog

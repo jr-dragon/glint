@@ -14,6 +14,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod/v4";
 import { FilePreview } from "#/components/FilePreview";
+import { PaginationBar } from "#/components/PaginationBar";
 import {
 	Accordion,
 	AccordionContent,
@@ -70,12 +71,14 @@ import {
 
 // --- Server Functions ---
 
-const listCategoriesFn = createServerFn({ method: "GET" }).handler(async () => {
-	const [categories, { categoryObjects, uncategorizedObjects }] =
-		await Promise.all([listCategories(), listAllCategoryObjects()]);
+const listCategoriesFn = createServerFn({ method: "GET" })
+	.inputValidator(z.object({ page: z.number().int().min(1) }))
+	.handler(async ({ data }) => {
+		const [categories, { categoryObjects, uncategorizedObjects, total }] =
+			await Promise.all([listCategories(), listAllCategoryObjects(data.page)]);
 
-	return { categories, uncategorizedObjects, categoryObjects };
-});
+		return { categories, uncategorizedObjects, categoryObjects, total };
+	});
 
 const createCategoryFn = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ name: z.string().min(1) }))
@@ -109,9 +112,15 @@ const unbindObjectFn = createServerFn({ method: "POST" })
 
 // --- Route ---
 
+const searchSchema = z.object({
+	page: z.coerce.number().int().min(1).catch(1),
+});
+
 export const Route = createFileRoute("/admin/category")({
 	component: CategoryPage,
-	loader: () => listCategoriesFn(),
+	validateSearch: searchSchema,
+	loaderDeps: ({ search }) => ({ page: search.page }),
+	loader: ({ deps }) => listCategoriesFn({ data: { page: deps.page } }),
 });
 
 // --- Components ---
@@ -157,6 +166,8 @@ function ObjectCarousel({
 
 function CategoryPage() {
 	const loaderData = Route.useLoaderData();
+	const { page } = Route.useSearch();
+	const totalPages = Math.ceil(loaderData.total / 24);
 	const router = useRouter();
 
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -345,6 +356,8 @@ function CategoryPage() {
 					})}
 				</Accordion>
 			)}
+
+			<PaginationBar page={page} totalPages={totalPages} />
 
 			{/* Create / Edit Dialog */}
 			<Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

@@ -51,13 +51,20 @@ export async function deleteFile(id: string): Promise<void> {
 	});
 }
 
-export async function listFiles() {
+export async function listFiles(page = 1, perPage = 12) {
 	const db = createPrismaClient();
-	return db.object.findMany({
-		where: { deleted_at: null },
-		orderBy: { created_at: "desc" },
-		include: { tags: true },
-	});
+	const where = { deleted_at: null };
+	const [items, total] = await Promise.all([
+		db.object.findMany({
+			where,
+			orderBy: { created_at: "desc" },
+			include: { tags: true },
+			skip: (page - 1) * perPage,
+			take: perPage,
+		}),
+		db.object.count({ where }),
+	]);
+	return { items, total };
 }
 
 export async function addTagsToFile(
@@ -168,22 +175,32 @@ export async function listCategoryObjects(
 	}));
 }
 
-/** Fetch all objects with their category tags in a single query, then group by category. */
-export async function listAllCategoryObjects(): Promise<{
+/** Fetch objects with their category tags in a single query, then group by category. */
+export async function listAllCategoryObjects(
+	page = 1,
+	perPage = 24,
+): Promise<{
 	categoryObjects: Record<string, CategoryObject[]>;
 	uncategorizedObjects: CategoryObject[];
+	total: number;
 }> {
 	const db = createPrismaClient();
-	const rows = await db.object.findMany({
-		where: { deleted_at: null },
-		include: {
-			tags: {
-				where: { name: { startsWith: CATEGORY_PREFIX } },
-				select: { id: true },
+	const where = { deleted_at: null };
+	const [rows, total] = await Promise.all([
+		db.object.findMany({
+			where,
+			include: {
+				tags: {
+					where: { name: { startsWith: CATEGORY_PREFIX } },
+					select: { id: true },
+				},
 			},
-		},
-		orderBy: { created_at: "desc" },
-	});
+			orderBy: { created_at: "desc" },
+			skip: (page - 1) * perPage,
+			take: perPage,
+		}),
+		db.object.count({ where }),
+	]);
 
 	const categoryObjects: Record<string, CategoryObject[]> = {};
 	const uncategorizedObjects: CategoryObject[] = [];
@@ -206,7 +223,7 @@ export async function listAllCategoryObjects(): Promise<{
 		}
 	}
 
-	return { categoryObjects, uncategorizedObjects };
+	return { categoryObjects, uncategorizedObjects, total };
 }
 
 export async function bindObjectToCategory(
