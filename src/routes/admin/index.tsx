@@ -289,12 +289,19 @@ function AdminPage() {
 									mime={file.metadata.mime}
 									alt={file.metadata.originalName}
 								/>
-								{getCategoryName(file.tags) && (
+								{getCategoryName(file.tags) ? (
 									<Badge
 										variant="secondary"
 										className="absolute right-2 top-2 bg-background/80 backdrop-blur-sm"
 									>
 										{getCategoryName(file.tags)}
+									</Badge>
+								) : (
+									<Badge
+										variant="destructive"
+										className="absolute right-2 top-2 backdrop-blur-sm"
+									>
+										未分類
 									</Badge>
 								)}
 							</div>
