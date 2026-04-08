@@ -87,3 +87,123 @@ export async function removeTagFromFile(
 		data: { tags: { disconnect: { name: tagName } } },
 	});
 }
+
+// --- Category (implemented as system:category:{value} tags) ---
+
+const CATEGORY_PREFIX = "system:category:";
+
+export interface CategoryRecord {
+	id: string;
+	name: string;
+	value: string;
+	objectCount: number;
+}
+
+export async function listCategories(): Promise<CategoryRecord[]> {
+	const db = createPrismaClient();
+	const tags = await db.tag.findMany({
+		where: { name: { startsWith: CATEGORY_PREFIX } },
+		include: {
+			objects: { where: { deleted_at: null }, select: { id: true } },
+		},
+		orderBy: { created_at: "asc" },
+	});
+
+	return tags.map((tag) => ({
+		id: tag.id,
+		name: tag.name.slice(CATEGORY_PREFIX.length),
+		value: tag.name,
+		objectCount: tag.objects.length,
+	}));
+}
+
+export async function createCategory(name: string): Promise<CategoryRecord> {
+	const db = createPrismaClient();
+	const tagName = `${CATEGORY_PREFIX}${name}`;
+	const tag = await db.tag.create({ data: { name: tagName } });
+	return { id: tag.id, name, value: tag.name, objectCount: 0 };
+}
+
+export async function updateCategory(
+	id: string,
+	newName: string,
+): Promise<CategoryRecord> {
+	const db = createPrismaClient();
+	const tagName = `${CATEGORY_PREFIX}${newName}`;
+	const tag = await db.tag.update({ where: { id }, data: { name: tagName } });
+	const count = await db.object.count({
+		where: { deleted_at: null, tags: { some: { id } } },
+	});
+	return { id: tag.id, name: newName, value: tag.name, objectCount: count };
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+	const db = createPrismaClient();
+	await db.tag.delete({ where: { id } });
+}
+
+export interface CategoryObject {
+	id: string;
+	path: string;
+	metadata: { mime: string; size: number; originalName: string };
+}
+
+export async function listCategoryObjects(
+	categoryId: string | null,
+): Promise<CategoryObject[]> {
+	const db = createPrismaClient();
+	const where = categoryId
+		? { deleted_at: null, tags: { some: { id: categoryId } } }
+		: {
+				deleted_at: null,
+				tags: { none: { name: { startsWith: CATEGORY_PREFIX } } },
+			};
+	const rows = await db.object.findMany({
+		where,
+		orderBy: { created_at: "desc" },
+	});
+	return rows.map((r) => ({
+		id: r.id,
+		path: r.path,
+		metadata: r.metadata as CategoryObject["metadata"],
+	}));
+}
+
+export async function bindObjectToCategory(
+	objectId: string,
+	categoryId: string,
+): Promise<void> {
+	const db = createPrismaClient();
+	// Remove existing category tags first (one object = one category)
+	const existingCategoryTags = await db.tag.findMany({
+		where: {
+			name: { startsWith: CATEGORY_PREFIX },
+			objects: { some: { id: objectId } },
+		},
+	});
+	if (existingCategoryTags.length > 0) {
+		await db.object.update({
+			where: { id: objectId },
+			data: {
+				tags: {
+					disconnect: existingCategoryTags.map((t) => ({ id: t.id })),
+				},
+			},
+		});
+	}
+	await db.object.update({
+		where: { id: objectId },
+		data: { tags: { connect: { id: categoryId } } },
+	});
+}
+
+export async function unbindObjectFromCategory(
+	objectId: string,
+	categoryId: string,
+): Promise<void> {
+	const db = createPrismaClient();
+	await db.object.update({
+		where: { id: objectId },
+		data: { tags: { disconnect: { id: categoryId } } },
+	});
+}

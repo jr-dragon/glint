@@ -154,7 +154,8 @@ function TagEditor({
 	const addTags = useServerFn(addTagsFn);
 	const removeTag = useServerFn(removeTagFn);
 
-	const tagNames = file.tags.map((t) => t.name);
+	const userTags = file.tags.filter((t) => !t.name.startsWith("system:"));
+	const tagNames = userTags.map((t) => t.name);
 
 	async function handleChange(next: string[]) {
 		const currentSet = new Set(tagNames);
@@ -163,12 +164,13 @@ function TagEditor({
 		const added = next.filter((t) => !currentSet.has(t));
 		const removed = tagNames.filter((t) => !nextSet.has(t));
 
-		// Optimistic update: tag is immutable, name is the unique key
-		const newTags = next.map((name) => {
-			const existing = file.tags.find((t) => t.name === name);
+		// Optimistic update: preserve system tags, update user tags
+		const systemTags = file.tags.filter((t) => t.name.startsWith("system:"));
+		const newUserTags = next.map((name) => {
+			const existing = userTags.find((t) => t.name === name);
 			return existing ?? { id: name, name };
 		});
-		onTagsChange(file.id, newTags);
+		onTagsChange(file.id, [...systemTags, ...newUserTags]);
 
 		if (added.length > 0) {
 			await addTags({

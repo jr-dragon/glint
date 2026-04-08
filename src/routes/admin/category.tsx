@@ -1,5 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createServerFn, useServerFn } from "@tanstack/react-start";
 import {
+	ChevronDownIcon,
 	EditIcon,
 	FileIcon,
 	FolderTreeIcon,
@@ -10,13 +12,14 @@ import {
 	UnlinkIcon,
 	VideoIcon,
 } from "lucide-react";
+import { Accordion as AccordionPrimitive } from "radix-ui";
 import { useState } from "react";
+import { z } from "zod/v4";
 
 import {
 	Accordion,
 	AccordionContent,
 	AccordionItem,
-	AccordionTrigger,
 } from "#/components/ui/accordion";
 import {
 	AlertDialog,
@@ -55,99 +58,82 @@ import {
 } from "#/components/ui/empty";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
-import { Textarea } from "#/components/ui/textarea";
+import {
+	bindObjectToCategory,
+	type CategoryObject,
+	type CategoryRecord,
+	createCategory,
+	deleteCategory,
+	listCategories,
+	listCategoryObjects,
+	unbindObjectFromCategory,
+	updateCategory,
+} from "#/lib/storage";
+
+// --- Server Functions ---
+
+const listCategoriesFn = createServerFn({ method: "GET" }).handler(async () => {
+	const categories = await listCategories();
+	const uncategorized = await listCategoryObjects(null);
+
+	const categoryObjects = await Promise.all(
+		categories.map(async (cat) => ({
+			categoryId: cat.id,
+			objects: await listCategoryObjects(cat.id),
+		})),
+	);
+
+	return {
+		categories,
+		uncategorizedObjects: uncategorized,
+		categoryObjects: Object.fromEntries(
+			categoryObjects.map((co) => [co.categoryId, co.objects]),
+		),
+	};
+});
+
+const createCategoryFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ name: z.string().min(1) }))
+	.handler(async ({ data }) => {
+		return createCategory(data.name);
+	});
+
+const updateCategoryFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ id: z.string(), name: z.string().min(1) }))
+	.handler(async ({ data }) => {
+		return updateCategory(data.id, data.name);
+	});
+
+const deleteCategoryFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ id: z.string() }))
+	.handler(async ({ data }) => {
+		await deleteCategory(data.id);
+	});
+
+const bindObjectFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ objectId: z.string(), categoryId: z.string() }))
+	.handler(async ({ data }) => {
+		await bindObjectToCategory(data.objectId, data.categoryId);
+	});
+
+const unbindObjectFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ objectId: z.string(), categoryId: z.string() }))
+	.handler(async ({ data }) => {
+		await unbindObjectFromCategory(data.objectId, data.categoryId);
+	});
+
+// --- Route ---
 
 export const Route = createFileRoute("/admin/category")({
 	component: CategoryPage,
+	loader: () => listCategoriesFn(),
 });
 
-interface Category {
-	id: string;
-	name: string;
-	description: string;
-	objectCount: number;
-}
+// --- Types ---
 
-interface ObjectRecord {
-	id: string;
-	name: string;
-	path: string;
-	mime: string;
-	categoryId: string | null;
-}
+type ObjectRecord = CategoryObject;
 
-const INITIAL_CATEGORIES: Category[] = [
-	{
-		id: "cat-1",
-		name: "人像",
-		description: "人物肖像與生活照",
-		objectCount: 3,
-	},
-	{
-		id: "cat-2",
-		name: "風景",
-		description: "自然風光與城市景觀",
-		objectCount: 2,
-	},
-	{
-		id: "cat-3",
-		name: "音樂",
-		description: "音樂相關檔案與素材",
-		objectCount: 0,
-	},
-];
-
-const INITIAL_OBJECTS: ObjectRecord[] = [
-	{
-		id: "obj-1",
-		name: "portrait-01.jpg",
-		path: "img/portrait-01.jpg",
-		mime: "image/jpeg",
-		categoryId: "cat-1",
-	},
-	{
-		id: "obj-2",
-		name: "portrait-02.jpg",
-		path: "img/portrait-02.jpg",
-		mime: "image/jpeg",
-		categoryId: "cat-1",
-	},
-	{
-		id: "obj-3",
-		name: "selfie.png",
-		path: "img/selfie.png",
-		mime: "image/png",
-		categoryId: "cat-1",
-	},
-	{
-		id: "obj-4",
-		name: "sunset.jpg",
-		path: "img/sunset.jpg",
-		mime: "image/jpeg",
-		categoryId: "cat-2",
-	},
-	{
-		id: "obj-5",
-		name: "city-night.jpg",
-		path: "img/city-night.jpg",
-		mime: "image/jpeg",
-		categoryId: "cat-2",
-	},
-	{
-		id: "obj-6",
-		name: "demo-video.mp4",
-		path: "vid/demo-video.mp4",
-		mime: "video/mp4",
-		categoryId: null,
-	},
-	{
-		id: "obj-7",
-		name: "notes.pdf",
-		path: "doc/notes.pdf",
-		mime: "application/pdf",
-		categoryId: null,
-	},
-];
+// --- Components ---
 
 function ObjectPreview({ mime }: { mime: string }) {
 	if (mime.startsWith("image/")) {
@@ -178,92 +164,97 @@ function ObjectPreview({ mime }: { mime: string }) {
 	);
 }
 
+function ObjectCarousel({
+	objects,
+	action,
+}: {
+	objects: ObjectRecord[];
+	action: (obj: ObjectRecord) => React.ReactNode;
+}) {
+	return (
+		<Carousel opts={{ align: "start" }} className="mx-auto w-full">
+			<CarouselContent>
+				{objects.map((obj) => (
+					<CarouselItem
+						key={obj.id}
+						className="basis-1/2 sm:basis-1/3 lg:basis-1/4"
+					>
+						<Card className="group overflow-hidden">
+							<div className="aspect-video w-full">
+								<ObjectPreview mime={obj.metadata.mime} />
+							</div>
+							<div className="flex items-center justify-between gap-2 px-3 py-2">
+								<span className="truncate text-sm font-medium">
+									{obj.metadata.originalName}
+								</span>
+								{action(obj)}
+							</div>
+						</Card>
+					</CarouselItem>
+				))}
+			</CarouselContent>
+			<CarouselPrevious className="-left-4" />
+			<CarouselNext className="-right-4" />
+		</Carousel>
+	);
+}
+
 function CategoryPage() {
-	const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
-	const [objects, setObjects] = useState<ObjectRecord[]>(INITIAL_OBJECTS);
+	const loaderData = Route.useLoaderData();
+	const router = useRouter();
 
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
-	const [editTarget, setEditTarget] = useState<Category | null>(null);
+	const [editTarget, setEditTarget] = useState<CategoryRecord | null>(null);
 	const [formName, setFormName] = useState("");
-	const [formDescription, setFormDescription] = useState("");
+	const [deleteTarget, setDeleteTarget] = useState<CategoryRecord | null>(null);
 
-	const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+	const createCat = useServerFn(createCategoryFn);
+	const updateCat = useServerFn(updateCategoryFn);
+	const deleteCat = useServerFn(deleteCategoryFn);
+	const bindObj = useServerFn(bindObjectFn);
+	const unbindObj = useServerFn(unbindObjectFn);
+
+	const { categories, uncategorizedObjects, categoryObjects } = loaderData;
 
 	function openCreate() {
 		setEditTarget(null);
 		setFormName("");
-		setFormDescription("");
 		setEditDialogOpen(true);
 	}
 
-	function openEdit(cat: Category) {
+	function openEdit(cat: CategoryRecord) {
 		setEditTarget(cat);
 		setFormName(cat.name);
-		setFormDescription(cat.description);
 		setEditDialogOpen(true);
 	}
 
-	function handleSave() {
+	async function handleSave() {
 		if (!formName.trim()) return;
-
 		if (editTarget) {
-			setCategories((prev) =>
-				prev.map((c) =>
-					c.id === editTarget.id
-						? {
-								...c,
-								name: formName.trim(),
-								description: formDescription.trim(),
-							}
-						: c,
-				),
-			);
+			await updateCat({ data: { id: editTarget.id, name: formName.trim() } });
 		} else {
-			const newCat: Category = {
-				id: `cat-${Date.now()}`,
-				name: formName.trim(),
-				description: formDescription.trim(),
-				objectCount: 0,
-			};
-			setCategories((prev) => [...prev, newCat]);
+			await createCat({ data: { name: formName.trim() } });
 		}
 		setEditDialogOpen(false);
+		router.invalidate();
 	}
 
-	function handleDelete() {
+	async function handleDelete() {
 		if (!deleteTarget) return;
-		setCategories((prev) => prev.filter((c) => c.id !== deleteTarget.id));
-		setObjects((prev) =>
-			prev.map((o) =>
-				o.categoryId === deleteTarget.id ? { ...o, categoryId: null } : o,
-			),
-		);
+		await deleteCat({ data: { id: deleteTarget.id } });
 		setDeleteTarget(null);
+		router.invalidate();
 	}
 
-	function handleBind(categoryId: string, objectId: string) {
-		setObjects((prev) =>
-			prev.map((o) => (o.id === objectId ? { ...o, categoryId } : o)),
-		);
-		setCategories((prev) =>
-			prev.map((c) =>
-				c.id === categoryId ? { ...c, objectCount: c.objectCount + 1 } : c,
-			),
-		);
+	async function handleBind(categoryId: string, objectId: string) {
+		await bindObj({ data: { objectId, categoryId } });
+		router.invalidate();
 	}
 
-	function handleUnbind(categoryId: string, objectId: string) {
-		setObjects((prev) =>
-			prev.map((o) => (o.id === objectId ? { ...o, categoryId: null } : o)),
-		);
-		setCategories((prev) =>
-			prev.map((c) =>
-				c.id === categoryId ? { ...c, objectCount: c.objectCount - 1 } : c,
-			),
-		);
+	async function handleUnbind(categoryId: string, objectId: string) {
+		await unbindObj({ data: { objectId, categoryId } });
+		router.invalidate();
 	}
-
-	const unboundObjects = objects.filter((o) => o.categoryId === null);
 
 	return (
 		<>
@@ -275,7 +266,7 @@ function CategoryPage() {
 				</Button>
 			</div>
 
-			{categories.length === 0 ? (
+			{categories.length === 0 && uncategorizedObjects.length === 0 ? (
 				<Empty className="border">
 					<FolderTreeIcon className="size-10 text-muted-foreground" />
 					<EmptyHeader>
@@ -290,44 +281,34 @@ function CategoryPage() {
 			) : (
 				<Accordion type="single" collapsible className="rounded-xl border px-4">
 					{categories.map((cat) => {
-						const bound = objects.filter((o) => o.categoryId === cat.id);
+						const bound = (categoryObjects[cat.id] ?? []) as ObjectRecord[];
 						return (
 							<AccordionItem key={cat.id} value={cat.id}>
-								<AccordionTrigger>
-									<div className="flex flex-1 items-center gap-3">
-										<span className="font-medium">{cat.name}</span>
-										{cat.description && (
-											<span className="hidden text-muted-foreground sm:inline">
-												{cat.description}
-											</span>
-										)}
-										<Badge variant="secondary">{cat.objectCount}</Badge>
-									</div>
-									<span className="flex items-center gap-1">
-										<Button
-											variant="ghost"
-											size="icon-xs"
-											onClick={(e) => {
-												e.stopPropagation();
-												openEdit(cat);
-											}}
-											title="編輯"
-										>
-											<EditIcon className="size-3.5" />
-										</Button>
-										<Button
-											variant="ghost"
-											size="icon-xs"
-											onClick={(e) => {
-												e.stopPropagation();
-												setDeleteTarget(cat);
-											}}
-											title="刪除"
-										>
-											<Trash2Icon className="size-3.5 text-destructive" />
-										</Button>
-									</span>
-								</AccordionTrigger>
+								<AccordionPrimitive.Header className="flex items-center">
+									<AccordionPrimitive.Trigger className="flex flex-1 items-start justify-between gap-4 rounded-md py-4 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [&[data-state=open]>svg]:rotate-180">
+										<div className="flex flex-1 items-center gap-3">
+											<span className="font-medium">{cat.name}</span>
+											<Badge variant="secondary">{cat.objectCount}</Badge>
+										</div>
+										<ChevronDownIcon className="pointer-events-none size-4 shrink-0 translate-y-0.5 text-muted-foreground transition-transform duration-200" />
+									</AccordionPrimitive.Trigger>
+									<Button
+										variant="ghost"
+										size="icon-xs"
+										onClick={() => openEdit(cat)}
+										title="編輯"
+									>
+										<EditIcon className="size-3.5" />
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon-xs"
+										onClick={() => setDeleteTarget(cat)}
+										title="刪除"
+									>
+										<Trash2Icon className="size-3.5 text-destructive" />
+									</Button>
+								</AccordionPrimitive.Header>
 								<AccordionContent>
 									<div className="grid gap-6 px-2">
 										{/* Bound objects */}
@@ -340,91 +321,47 @@ function CategoryPage() {
 													尚未綁定任何物件
 												</p>
 											) : (
-												<Carousel
-													opts={{ align: "start" }}
-													className="mx-auto w-full"
-												>
-													<CarouselContent>
-														{bound.map((obj) => (
-															<CarouselItem
-																key={obj.id}
-																className="basis-1/2 sm:basis-1/3 lg:basis-1/4"
-															>
-																<Card className="group overflow-hidden">
-																	<div className="aspect-video w-full">
-																		<ObjectPreview mime={obj.mime} />
-																	</div>
-																	<div className="flex items-center justify-between gap-2 px-3 py-2">
-																		<span className="truncate text-sm font-medium">
-																			{obj.name}
-																		</span>
-																		<Button
-																			variant="ghost"
-																			size="icon-xs"
-																			className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-																			onClick={() =>
-																				handleUnbind(cat.id, obj.id)
-																			}
-																			title="解除綁定"
-																		>
-																			<UnlinkIcon className="size-3.5 text-destructive" />
-																		</Button>
-																	</div>
-																</Card>
-															</CarouselItem>
-														))}
-													</CarouselContent>
-													<CarouselPrevious className="-left-4" />
-													<CarouselNext className="-right-4" />
-												</Carousel>
+												<ObjectCarousel
+													objects={bound}
+													action={(obj) => (
+														<Button
+															variant="ghost"
+															size="icon-xs"
+															className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+															onClick={() => handleUnbind(cat.id, obj.id)}
+															title="解除綁定"
+														>
+															<UnlinkIcon className="size-3.5 text-destructive" />
+														</Button>
+													)}
+												/>
 											)}
 										</div>
 
 										{/* Unbound objects */}
 										<div>
 											<h4 className="mb-3 text-sm font-medium">
-												未分類（{unboundObjects.length}）
+												未分類（{uncategorizedObjects.length}）
 											</h4>
-											{unboundObjects.length === 0 ? (
+											{uncategorizedObjects.length === 0 ? (
 												<p className="text-sm text-muted-foreground">
 													所有物件皆已分類
 												</p>
 											) : (
-												<Carousel
-													opts={{ align: "start" }}
-													className="mx-auto w-full"
-												>
-													<CarouselContent>
-														{unboundObjects.map((obj) => (
-															<CarouselItem
-																key={obj.id}
-																className="basis-1/2 sm:basis-1/3 lg:basis-1/4"
-															>
-																<Card className="group overflow-hidden">
-																	<div className="aspect-video w-full">
-																		<ObjectPreview mime={obj.mime} />
-																	</div>
-																	<div className="flex items-center justify-between gap-2 px-3 py-2">
-																		<span className="truncate text-sm font-medium">
-																			{obj.name}
-																		</span>
-																		<Button
-																			variant="ghost"
-																			size="icon-xs"
-																			className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-																			onClick={() => handleBind(cat.id, obj.id)}
-																			title="綁定至此分類"
-																		>
-																			<LinkIcon className="size-3.5" />
-																		</Button>
-																	</div>
-																</Card>
-															</CarouselItem>
-														))}
-													</CarouselContent>
-													<CarouselPrevious className="-left-4" />
-													<CarouselNext className="-right-4" />
-												</Carousel>
+												<ObjectCarousel
+													objects={uncategorizedObjects as ObjectRecord[]}
+													action={(obj) => (
+														<Button
+															variant="ghost"
+															size="icon-xs"
+															className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+															onClick={() => handleBind(cat.id, obj.id)}
+															title="綁定至此分類"
+														>
+															<LinkIcon className="size-3.5" />
+														</Button>
+													)}
+												/>
 											)}
 										</div>
 									</div>
@@ -442,7 +379,7 @@ function CategoryPage() {
 						<DialogTitle>{editTarget ? "編輯分類" : "新增分類"}</DialogTitle>
 						<DialogDescription>
 							{editTarget
-								? "修改分類的名稱與描述"
+								? "修改分類的名稱"
 								: "建立一個新的分類來組織你的媒體檔案"}
 						</DialogDescription>
 					</DialogHeader>
@@ -454,16 +391,6 @@ function CategoryPage() {
 								value={formName}
 								onChange={(e) => setFormName(e.target.value)}
 								placeholder="例如：人像、風景"
-							/>
-						</div>
-						<div className="grid gap-2">
-							<Label htmlFor="cat-desc">描述</Label>
-							<Textarea
-								id="cat-desc"
-								value={formDescription}
-								onChange={(e) => setFormDescription(e.target.value)}
-								placeholder="選填，簡短描述此分類的用途"
-								rows={3}
 							/>
 						</div>
 					</div>
