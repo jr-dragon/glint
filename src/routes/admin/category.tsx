@@ -3,19 +3,16 @@ import { createServerFn, useServerFn } from "@tanstack/react-start";
 import {
 	ChevronDownIcon,
 	EditIcon,
-	FileIcon,
 	FolderTreeIcon,
 	LinkIcon,
-	Music2Icon,
 	PlusIcon,
 	Trash2Icon,
 	UnlinkIcon,
-	VideoIcon,
 } from "lucide-react";
 import { Accordion as AccordionPrimitive } from "radix-ui";
 import { useState } from "react";
 import { z } from "zod/v4";
-
+import { FilePreview } from "#/components/FilePreview";
 import {
 	Accordion,
 	AccordionContent,
@@ -135,35 +132,6 @@ type ObjectRecord = CategoryObject;
 
 // --- Components ---
 
-function ObjectPreview({ mime }: { mime: string }) {
-	if (mime.startsWith("image/")) {
-		return (
-			<div className="flex size-full items-center justify-center bg-muted/50 text-muted-foreground">
-				<FileIcon className="size-6" />
-			</div>
-		);
-	}
-	if (mime.startsWith("video/")) {
-		return (
-			<div className="flex size-full items-center justify-center bg-muted/50 text-muted-foreground">
-				<VideoIcon className="size-6" />
-			</div>
-		);
-	}
-	if (mime.startsWith("audio/")) {
-		return (
-			<div className="flex size-full items-center justify-center bg-muted/50 text-muted-foreground">
-				<Music2Icon className="size-6" />
-			</div>
-		);
-	}
-	return (
-		<div className="flex size-full items-center justify-center bg-muted/50 text-muted-foreground">
-			<FileIcon className="size-6" />
-		</div>
-	);
-}
-
 function ObjectCarousel({
 	objects,
 	action,
@@ -181,7 +149,11 @@ function ObjectCarousel({
 					>
 						<Card className="group overflow-hidden">
 							<div className="aspect-video w-full">
-								<ObjectPreview mime={obj.metadata.mime} />
+								<FilePreview
+									path={obj.path}
+									mime={obj.metadata.mime}
+									alt={obj.metadata.originalName}
+								/>
 							</div>
 							<div className="flex items-center justify-between gap-2 px-3 py-2">
 								<span className="truncate text-sm font-medium">

@@ -3,13 +3,12 @@ import { createServerFn, useServerFn } from "@tanstack/react-start";
 import {
 	FileIcon,
 	LoaderCircleIcon,
-	Music2Icon,
 	Trash2Icon,
 	UploadCloudIcon,
 } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { z } from "zod/v4";
-
+import { FilePreview } from "#/components/FilePreview";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -83,6 +82,13 @@ interface FileRecord {
 	tags: TagRecord[];
 }
 
+const CATEGORY_PREFIX = "system:category:";
+
+function getCategoryName(tags: TagRecord[]): string | null {
+	const tag = tags.find((t) => t.name.startsWith(CATEGORY_PREFIX));
+	return tag ? tag.name.slice(CATEGORY_PREFIX.length) : null;
+}
+
 function displayTagName(name: string) {
 	return name.replace(/^user:/, "");
 }
@@ -98,49 +104,6 @@ function getTypeBadge(mime: string) {
 	if (mime.startsWith("video/")) return <Badge variant="secondary">影片</Badge>;
 	if (mime.startsWith("audio/")) return <Badge variant="secondary">音訊</Badge>;
 	return <Badge variant="outline">文件</Badge>;
-}
-
-function getPreviewUrl(path: string) {
-	return `/api/files/${path}`;
-}
-
-function FileCardPreview({ file }: { file: FileRecord }) {
-	const { mime } = file.metadata;
-	const url = getPreviewUrl(file.path);
-
-	if (mime.startsWith("image/")) {
-		return (
-			<img
-				src={url}
-				alt={file.metadata.originalName}
-				className="h-full w-full object-cover"
-			/>
-		);
-	}
-	if (mime.startsWith("video/")) {
-		return (
-			<video controls className="h-full w-full object-cover">
-				<source src={url} type={mime} />
-				<track kind="captions" />
-			</video>
-		);
-	}
-	if (mime.startsWith("audio/")) {
-		return (
-			<div className="flex h-full flex-col items-center justify-center gap-3 px-4">
-				<Music2Icon className="size-10 text-muted-foreground" />
-				<audio controls className="w-full">
-					<source src={url} type={mime} />
-					<track kind="captions" />
-				</audio>
-			</div>
-		);
-	}
-	return (
-		<div className="flex h-full items-center justify-center">
-			<FileIcon className="size-10 text-muted-foreground" />
-		</div>
-	);
 }
 
 function TagEditor({
@@ -320,8 +283,20 @@ function AdminPage() {
 							key={file.id}
 							className="group overflow-hidden rounded-xl border bg-card"
 						>
-							<div className="aspect-video w-full bg-muted">
-								<FileCardPreview file={file} />
+							<div className="relative aspect-video w-full bg-muted">
+								<FilePreview
+									path={file.path}
+									mime={file.metadata.mime}
+									alt={file.metadata.originalName}
+								/>
+								{getCategoryName(file.tags) && (
+									<Badge
+										variant="secondary"
+										className="absolute right-2 top-2 bg-background/80 backdrop-blur-sm"
+									>
+										{getCategoryName(file.tags)}
+									</Badge>
+								)}
 							</div>
 							<div className="flex items-start justify-between gap-2 p-3">
 								<div className="min-w-0">
