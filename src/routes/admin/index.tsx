@@ -22,6 +22,7 @@ import {
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { TagsInput } from "#/components/ui/tags-input";
+import { CATEGORY_PREFIX } from "#/lib/constants";
 import {
 	addTagsToFile,
 	deleteFile,
@@ -81,8 +82,6 @@ interface FileRecord {
 	created_at: string;
 	tags: TagRecord[];
 }
-
-const CATEGORY_PREFIX = "system:category:";
 
 function getCategoryName(tags: TagRecord[]): string | null {
 	const tag = tags.find((t) => t.name.startsWith(CATEGORY_PREFIX));
@@ -278,60 +277,63 @@ function AdminPage() {
 				</div>
 			) : (
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					{files.map((file) => (
-						<div
-							key={file.id}
-							className="group overflow-hidden rounded-xl border bg-card"
-						>
-							<div className="relative aspect-video w-full bg-muted">
-								<FilePreview
-									path={file.path}
-									mime={file.metadata.mime}
-									alt={file.metadata.originalName}
-								/>
-								{getCategoryName(file.tags) ? (
-									<Badge
-										variant="secondary"
-										className="absolute right-2 top-2 bg-background/80 backdrop-blur-sm"
-									>
-										{getCategoryName(file.tags)}
-									</Badge>
-								) : (
-									<Badge
-										variant="destructive"
-										className="absolute right-2 top-2 backdrop-blur-sm"
-									>
-										未分類
-									</Badge>
-								)}
-							</div>
-							<div className="flex items-start justify-between gap-2 p-3">
-								<div className="min-w-0">
-									<p className="truncate text-sm font-medium">
-										{file.metadata.originalName}
-									</p>
-									<div className="mt-1.5 flex items-center gap-2">
-										{getTypeBadge(file.metadata.mime)}
-										<span className="text-xs text-muted-foreground">
-											{formatSize(file.metadata.size)}
-										</span>
-										<span className="text-xs text-muted-foreground">
-											{new Date(file.created_at).toLocaleDateString()}
-										</span>
-									</div>
+					{files.map((file) => {
+						const categoryName = getCategoryName(file.tags);
+						return (
+							<div
+								key={file.id}
+								className="group overflow-hidden rounded-xl border bg-card"
+							>
+								<div className="relative aspect-video w-full bg-muted">
+									<FilePreview
+										path={file.path}
+										mime={file.metadata.mime}
+										alt={file.metadata.originalName}
+									/>
+									{categoryName ? (
+										<Badge
+											variant="secondary"
+											className="absolute right-2 top-2 bg-background/80 backdrop-blur-sm"
+										>
+											{categoryName}
+										</Badge>
+									) : (
+										<Badge
+											variant="destructive"
+											className="absolute right-2 top-2 backdrop-blur-sm"
+										>
+											未分類
+										</Badge>
+									)}
 								</div>
-								<Button
-									variant="ghost"
-									size="icon-xs"
-									className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-									onClick={() => setDeleteTarget(file)}
-								>
-									<Trash2Icon className="size-3.5 text-destructive" />
-								</Button>
+								<div className="flex items-start justify-between gap-2 p-3">
+									<div className="min-w-0">
+										<p className="truncate text-sm font-medium">
+											{file.metadata.originalName}
+										</p>
+										<div className="mt-1.5 flex items-center gap-2">
+											{getTypeBadge(file.metadata.mime)}
+											<span className="text-xs text-muted-foreground">
+												{formatSize(file.metadata.size)}
+											</span>
+											<span className="text-xs text-muted-foreground">
+												{new Date(file.created_at).toLocaleDateString()}
+											</span>
+										</div>
+									</div>
+									<Button
+										variant="ghost"
+										size="icon-xs"
+										className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+										onClick={() => setDeleteTarget(file)}
+									>
+										<Trash2Icon className="size-3.5 text-destructive" />
+									</Button>
+								</div>
+								<TagEditor file={file} onTagsChange={handleTagsChange} />
 							</div>
-							<TagEditor file={file} onTagsChange={handleTagsChange} />
-						</div>
-					))}
+						);
+					})}
 				</div>
 			)}
 

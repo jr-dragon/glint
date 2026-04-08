@@ -90,7 +90,7 @@ export async function removeTagFromFile(
 
 // --- Category (implemented as system:category:{value} tags) ---
 
-const CATEGORY_PREFIX = "system:category:";
+import { CATEGORY_PREFIX } from "#/lib/constants";
 
 export interface CategoryRecord {
 	id: string;
