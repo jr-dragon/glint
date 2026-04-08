@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { uuidv7 } from "uuidv7";
 import type { Prisma } from "#/generated/prisma/client";
-import { CATEGORY_PREFIX, CREATOR_PREFIX } from "#/lib/constants";
+import { CATEGORY_PREFIX, CREATOR_PREFIX, PUBLIC_TAG } from "#/lib/constants";
 import { createPrismaClient } from "#/lib/db";
 
 interface UploadResult {
@@ -368,5 +368,28 @@ export async function unbindObjectFromCreator(
 	await db.object.update({
 		where: { id: objectId },
 		data: { tags: { disconnect: { id: creatorId } } },
+	});
+}
+
+// --- Public visibility (system:public tag) ---
+
+export async function setObjectPublic(objectId: string): Promise<void> {
+	const db = createPrismaClient();
+	await db.tag.upsert({
+		where: { name: PUBLIC_TAG },
+		create: { name: PUBLIC_TAG },
+		update: {},
+	});
+	await db.object.update({
+		where: { id: objectId },
+		data: { tags: { connect: { name: PUBLIC_TAG } } },
+	});
+}
+
+export async function unsetObjectPublic(objectId: string): Promise<void> {
+	const db = createPrismaClient();
+	await db.object.update({
+		where: { id: objectId },
+		data: { tags: { disconnect: { name: PUBLIC_TAG } } },
 	});
 }

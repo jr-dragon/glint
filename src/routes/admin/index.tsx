@@ -2,6 +2,8 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn, useServerFn } from "@tanstack/react-start";
 import {
   CheckIcon,
+  EarthIcon,
+  EarthLockIcon,
   FileIcon,
   LoaderCircleIcon,
   PencilIcon,
@@ -52,7 +54,7 @@ import {
   PopoverTrigger,
 } from "#/components/ui/popover";
 import { TagsInput } from "#/components/ui/tags-input";
-import { CATEGORY_PREFIX, CREATOR_PREFIX } from "#/lib/constants";
+import { CATEGORY_PREFIX, CREATOR_PREFIX, PUBLIC_TAG } from "#/lib/constants";
 import {
   addTagsToFile,
   bindObjectToCategory,
@@ -67,7 +69,9 @@ import {
   listFiles,
   removeTagFromFile,
   renameFile,
+  setObjectPublic,
   unbindObjectFromCreator,
+  unsetObjectPublic,
   updateCreator,
   uploadFile,
 } from "#/lib/storage";
@@ -155,6 +159,16 @@ const createCategoryFn = createServerFn({ method: "POST" })
     return createCategory(data.name);
   });
 
+const setPublicFn = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ objectId: z.string(), isPublic: z.boolean() }))
+  .handler(async ({ data }) => {
+    if (data.isPublic) {
+      await setObjectPublic(data.objectId);
+    } else {
+      await unsetObjectPublic(data.objectId);
+    }
+  });
+
 const bindCategoryFn = createServerFn({ method: "POST" })
   .inputValidator(z.object({ objectId: z.string(), categoryId: z.string() }))
   .handler(async ({ data }) => {
@@ -184,6 +198,56 @@ interface FileRecord {
   metadata: { mime: string; size: number; originalName: string };
   created_at: string;
   tags: TagRecord[];
+}
+
+function isPublic(tags: TagRecord[]): boolean {
+  return tags.some((t) => t.name === PUBLIC_TAG);
+}
+
+function PublicToggle({
+  file,
+  onTagsChange,
+}: {
+  file: FileRecord;
+  onTagsChange: (fileId: string, tags: TagRecord[]) => void;
+}) {
+  const router = useRouter();
+  const setPublic = useServerFn(setPublicFn);
+  const pub = isPublic(file.tags);
+
+  async function handleToggle() {
+    const next = !pub;
+    // Optimistic update
+    if (next) {
+      onTagsChange(file.id, [
+        ...file.tags,
+        { id: PUBLIC_TAG, name: PUBLIC_TAG },
+      ]);
+    } else {
+      onTagsChange(
+        file.id,
+        file.tags.filter((t) => t.name !== PUBLIC_TAG),
+      );
+    }
+    await setPublic({ data: { objectId: file.id, isPublic: next } });
+    router.invalidate();
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
+      title={pub ? "設為非公開" : "設為公開"}
+      onClick={handleToggle}
+    >
+      {pub ? (
+        <EarthIcon className="size-3.5" />
+      ) : (
+        <EarthLockIcon className="size-3.5 text-muted-foreground" />
+      )}
+    </Button>
+  );
 }
 
 function getCategoryTag(
@@ -912,6 +976,9 @@ function AdminPage() {
                   mime={file.metadata.mime}
                   alt={file.metadata.originalName}
                 />
+                <div className="absolute left-2 top-2">
+                  <PublicToggle file={file} onTagsChange={handleTagsChange} />
+                </div>
                 <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
                   <CategoryEditor
                     file={file}
