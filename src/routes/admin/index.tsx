@@ -55,10 +55,14 @@ import { TagsInput } from "#/components/ui/tags-input";
 import { CATEGORY_PREFIX, CREATOR_PREFIX } from "#/lib/constants";
 import {
 	addTagsToFile,
+	bindObjectToCategory,
 	bindObjectToCreator,
+	type CategoryRecord,
 	type CreatorRecord,
+	createCategory,
 	createCreator,
 	deleteFile,
+	listCategories,
 	listCreators,
 	listFiles,
 	removeTagFromFile,
@@ -71,11 +75,12 @@ import {
 const listFilesFn = createServerFn({ method: "GET" })
 	.inputValidator(z.object({ page: z.number().int().min(1) }))
 	.handler(async ({ data }) => {
-		const [files, creators] = await Promise.all([
+		const [files, creators, categories] = await Promise.all([
 			listFiles(data.page),
 			listCreators(),
+			listCategories(),
 		]);
-		return { ...files, creators };
+		return { ...files, creators, categories };
 	});
 
 const uploadFileFn = createServerFn({ method: "POST" })
@@ -144,6 +149,18 @@ const unbindCreatorFn = createServerFn({ method: "POST" })
 		await unbindObjectFromCreator(data.objectId, data.creatorId);
 	});
 
+const createCategoryFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ name: z.string().min(1) }))
+	.handler(async ({ data }) => {
+		return createCategory(data.name);
+	});
+
+const bindCategoryFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ objectId: z.string(), categoryId: z.string() }))
+	.handler(async ({ data }) => {
+		await bindObjectToCategory(data.objectId, data.categoryId);
+	});
+
 const searchSchema = z.object({
 	page: z.coerce.number().int().min(1).catch(1),
 });
@@ -169,9 +186,141 @@ interface FileRecord {
 	tags: TagRecord[];
 }
 
-function getCategoryName(tags: TagRecord[]): string | null {
+function getCategoryTag(
+	tags: TagRecord[],
+): { id: string; name: string } | null {
 	const tag = tags.find((t) => t.name.startsWith(CATEGORY_PREFIX));
-	return tag ? tag.name.slice(CATEGORY_PREFIX.length) : null;
+	return tag
+		? { id: tag.id, name: tag.name.slice(CATEGORY_PREFIX.length) }
+		: null;
+}
+
+function CategoryEditor({
+	file,
+	allCategories,
+	onTagsChange,
+}: {
+	file: FileRecord;
+	allCategories: CategoryRecord[];
+	onTagsChange: (fileId: string, tags: TagRecord[]) => void;
+}) {
+	const router = useRouter();
+	const [open, setOpen] = useState(false);
+	const [search, setSearch] = useState("");
+	const createCat = useServerFn(createCategoryFn);
+	const bindCat = useServerFn(bindCategoryFn);
+
+	const current = getCategoryTag(file.tags);
+
+	const trimmed = search.trim();
+	const hasExactMatch = allCategories.some(
+		(c) => c.name.toLowerCase() === trimmed.toLowerCase(),
+	);
+	const showCreate = trimmed.length > 0 && !hasExactMatch;
+
+	async function handleSelect(cat: CategoryRecord) {
+		// Optimistic: replace category tag
+		const nonCategoryTags = file.tags.filter(
+			(t) => !t.name.startsWith(CATEGORY_PREFIX),
+		);
+		onTagsChange(file.id, [
+			...nonCategoryTags,
+			{ id: cat.id, name: cat.value },
+		]);
+		setOpen(false);
+		setSearch("");
+		await bindCat({ data: { objectId: file.id, categoryId: cat.id } });
+		router.invalidate();
+	}
+
+	async function handleCreate() {
+		if (!trimmed) return;
+		setOpen(false);
+		setSearch("");
+		const created = await createCat({ data: { name: trimmed } });
+		const nonCategoryTags = file.tags.filter(
+			(t) => !t.name.startsWith(CATEGORY_PREFIX),
+		);
+		onTagsChange(file.id, [
+			...nonCategoryTags,
+			{ id: created.id, name: created.value },
+		]);
+		await bindCat({ data: { objectId: file.id, categoryId: created.id } });
+		router.invalidate();
+	}
+
+	return (
+		<Popover
+			open={open}
+			onOpenChange={(v) => {
+				setOpen(v);
+				if (!v) setSearch("");
+			}}
+		>
+			<PopoverTrigger asChild>
+				{current ? (
+					<Badge
+						variant="secondary"
+						className="cursor-pointer bg-background/80 backdrop-blur-sm hover:bg-background/90"
+					>
+						{current.name}
+					</Badge>
+				) : (
+					<Badge
+						variant="destructive"
+						className="cursor-pointer backdrop-blur-sm"
+					>
+						未分類
+					</Badge>
+				)}
+			</PopoverTrigger>
+			<PopoverContent className="w-52 p-0" align="end">
+				<Command shouldFilter={false}>
+					<CommandInput
+						placeholder="搜尋分類…"
+						value={search}
+						onValueChange={setSearch}
+					/>
+					<CommandList>
+						{allCategories.filter(
+							(c) =>
+								!trimmed ||
+								c.name.toLowerCase().includes(trimmed.toLowerCase()),
+						).length === 0 &&
+							!showCreate && <CommandEmpty>找不到分類</CommandEmpty>}
+						<CommandGroup>
+							{allCategories
+								.filter(
+									(c) =>
+										!trimmed ||
+										c.name.toLowerCase().includes(trimmed.toLowerCase()),
+								)
+								.map((cat) => (
+									<CommandItem
+										key={cat.id}
+										onSelect={() => handleSelect(cat)}
+										className={
+											current?.id === cat.id ? "font-medium" : undefined
+										}
+									>
+										{cat.name}
+										{current?.id === cat.id && (
+											<CheckIcon className="ml-auto size-3.5" />
+										)}
+									</CommandItem>
+								))}
+							{showCreate && (
+								<CommandItem onSelect={handleCreate}>
+									<PlusIcon className="size-3.5" />
+									建立「{trimmed}」
+								</CommandItem>
+							)}
+						</CommandGroup>
+					</CommandList>
+				</Command>
+			</PopoverContent>
+		</Popover>
+	);
 }
 
 function displayTagName(name: string) {
@@ -617,7 +766,12 @@ function toFileRecords(
 }
 
 function AdminPage() {
-	const { items: loaderItems, total, creators } = Route.useLoaderData();
+	const {
+		items: loaderItems,
+		total,
+		creators,
+		categories,
+	} = Route.useLoaderData();
 	const { page } = Route.useSearch();
 	const totalPages = Math.ceil(total / 12);
 	const [files, setFiles] = useState(() => toFileRecords(loaderItems));
@@ -747,68 +901,58 @@ function AdminPage() {
 				</div>
 			) : (
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					{files.map((file) => {
-						const categoryName = getCategoryName(file.tags);
-						return (
-							<div
-								key={file.id}
-								className="group overflow-hidden rounded-xl border bg-card"
-							>
-								<div className="relative aspect-video w-full bg-muted">
-									<FilePreview
-										path={file.path}
-										mime={file.metadata.mime}
-										alt={file.metadata.originalName}
-									/>
-									<div className="absolute right-2 top-2 flex flex-col items-end gap-1">
-										{categoryName ? (
-											<Badge
-												variant="secondary"
-												className="bg-background/80 backdrop-blur-sm"
-											>
-												{categoryName}
-											</Badge>
-										) : (
-											<Badge variant="destructive" className="backdrop-blur-sm">
-												未分類
-											</Badge>
-										)}
-									</div>
-								</div>
-								<div className="flex items-start justify-between gap-2 p-3">
-									<div className="min-w-0">
-										<FileNameEditor
-											name={file.metadata.originalName}
-											onRename={(n) => handleRename(file.id, n)}
-										/>
-										<div className="mt-1.5 flex items-center gap-2">
-											{getTypeBadge(file.metadata.mime)}
-											<span className="text-xs text-muted-foreground">
-												{formatSize(file.metadata.size)}
-											</span>
-											<span className="text-xs text-muted-foreground">
-												{new Date(file.created_at).toLocaleDateString()}
-											</span>
-										</div>
-									</div>
-									<Button
-										variant="ghost"
-										size="icon-xs"
-										className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-										onClick={() => setDeleteTarget(file)}
-									>
-										<Trash2Icon className="size-3.5 text-destructive" />
-									</Button>
-								</div>
-								<TagEditor file={file} onTagsChange={handleTagsChange} />
-								<CreatorEditor
-									file={file}
-									allCreators={creators}
-									onCreatorsChange={handleTagsChange}
+					{files.map((file) => (
+						<div
+							key={file.id}
+							className="group overflow-hidden rounded-xl border bg-card"
+						>
+							<div className="relative aspect-video w-full bg-muted">
+								<FilePreview
+									path={file.path}
+									mime={file.metadata.mime}
+									alt={file.metadata.originalName}
 								/>
+								<div className="absolute right-2 top-2 flex flex-col items-end gap-1">
+									<CategoryEditor
+										file={file}
+										allCategories={categories}
+										onTagsChange={handleTagsChange}
+									/>
+								</div>
 							</div>
-						);
-					})}
+							<div className="flex items-start justify-between gap-2 p-3">
+								<div className="min-w-0">
+									<FileNameEditor
+										name={file.metadata.originalName}
+										onRename={(n) => handleRename(file.id, n)}
+									/>
+									<div className="mt-1.5 flex items-center gap-2">
+										{getTypeBadge(file.metadata.mime)}
+										<span className="text-xs text-muted-foreground">
+											{formatSize(file.metadata.size)}
+										</span>
+										<span className="text-xs text-muted-foreground">
+											{new Date(file.created_at).toLocaleDateString()}
+										</span>
+									</div>
+								</div>
+								<Button
+									variant="ghost"
+									size="icon-xs"
+									className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+									onClick={() => setDeleteTarget(file)}
+								>
+									<Trash2Icon className="size-3.5 text-destructive" />
+								</Button>
+							</div>
+							<TagEditor file={file} onTagsChange={handleTagsChange} />
+							<CreatorEditor
+								file={file}
+								allCreators={creators}
+								onCreatorsChange={handleTagsChange}
+							/>
+						</div>
+					))}
 				</div>
 			)}
 
