@@ -1,4 +1,10 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(bun run check:*)",
+      "Bash(bun run build:*)"
+    ]
+  },
   "enabledPlugins": {
     "cloudflare@cloudflare": true
   }

@@ -1,15 +1,18 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn, useServerFn } from "@tanstack/react-start";
 import {
+	CheckIcon,
 	FileIcon,
 	LoaderCircleIcon,
-	Music2Icon,
+	PencilIcon,
 	Trash2Icon,
 	UploadCloudIcon,
+	XIcon,
 } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { z } from "zod/v4";
-
+import { FilePreview } from "#/components/FilePreview";
+import { PaginationBar } from "#/components/PaginationBar";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -23,17 +26,21 @@ import {
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { TagsInput } from "#/components/ui/tags-input";
+import { CATEGORY_PREFIX } from "#/lib/constants";
 import {
 	addTagsToFile,
 	deleteFile,
 	listFiles,
 	removeTagFromFile,
+	renameFile,
 	uploadFile,
 } from "#/lib/storage";
 
-const listFilesFn = createServerFn({ method: "GET" }).handler(async () => {
-	return listFiles();
-});
+const listFilesFn = createServerFn({ method: "GET" })
+	.inputValidator(z.object({ page: z.number().int().min(1) }))
+	.handler(async ({ data }) => {
+		return listFiles(data.page);
+	});
 
 const uploadFileFn = createServerFn({ method: "POST" })
 	.inputValidator((input: unknown) => {
@@ -45,6 +52,12 @@ const uploadFileFn = createServerFn({ method: "POST" })
 	.handler(async ({ data }) => {
 		const file = data.get("file") as File;
 		return uploadFile(file);
+	});
+
+const renameFileFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ id: z.string(), name: z.string().min(1) }))
+	.handler(async ({ data }) => {
+		await renameFile(data.id, data.name);
 	});
 
 const deleteFileFn = createServerFn({ method: "POST" })
@@ -65,9 +78,15 @@ const removeTagFn = createServerFn({ method: "POST" })
 		await removeTagFromFile(data.fileId, data.tagName);
 	});
 
+const searchSchema = z.object({
+	page: z.coerce.number().int().min(1).catch(1),
+});
+
 export const Route = createFileRoute("/admin/")({
 	component: AdminPage,
-	loader: () => listFilesFn(),
+	validateSearch: searchSchema,
+	loaderDeps: ({ search }) => ({ page: search.page }),
+	loader: ({ deps }) => listFilesFn({ data: { page: deps.page } }),
 });
 
 interface TagRecord {
@@ -81,6 +100,11 @@ interface FileRecord {
 	metadata: { mime: string; size: number; originalName: string };
 	created_at: string;
 	tags: TagRecord[];
+}
+
+function getCategoryName(tags: TagRecord[]): string | null {
+	const tag = tags.find((t) => t.name.startsWith(CATEGORY_PREFIX));
+	return tag ? tag.name.slice(CATEGORY_PREFIX.length) : null;
 }
 
 function displayTagName(name: string) {
@@ -100,46 +124,74 @@ function getTypeBadge(mime: string) {
 	return <Badge variant="outline">文件</Badge>;
 }
 
-function getPreviewUrl(path: string) {
-	return `/api/files/${path}`;
-}
+function FileNameEditor({
+	name,
+	onRename,
+}: {
+	name: string;
+	onRename: (newName: string) => void;
+}) {
+	const [editing, setEditing] = useState(false);
+	const [draft, setDraft] = useState(name);
+	const inputRef = useRef<HTMLInputElement>(null);
 
-function FileCardPreview({ file }: { file: FileRecord }) {
-	const { mime } = file.metadata;
-	const url = getPreviewUrl(file.path);
+	function startEdit() {
+		setDraft(name);
+		setEditing(true);
+		requestAnimationFrame(() => inputRef.current?.select());
+	}
 
-	if (mime.startsWith("image/")) {
-		return (
-			<img
-				src={url}
-				alt={file.metadata.originalName}
-				className="h-full w-full object-cover"
-			/>
-		);
+	function commit() {
+		const trimmed = draft.trim();
+		if (trimmed && trimmed !== name) {
+			onRename(trimmed);
+		}
+		setEditing(false);
 	}
-	if (mime.startsWith("video/")) {
+
+	if (editing) {
 		return (
-			<video controls className="h-full w-full object-cover">
-				<source src={url} type={mime} />
-				<track kind="captions" />
-			</video>
-		);
-	}
-	if (mime.startsWith("audio/")) {
-		return (
-			<div className="flex h-full flex-col items-center justify-center gap-3 px-4">
-				<Music2Icon className="size-10 text-muted-foreground" />
-				<audio controls className="w-full">
-					<source src={url} type={mime} />
-					<track kind="captions" />
-				</audio>
+			<div className="flex items-center gap-1">
+				<input
+					ref={inputRef}
+					className="min-w-0 flex-1 rounded border bg-background px-1.5 py-0.5 text-sm font-medium outline-none focus:ring-1 focus:ring-ring"
+					value={draft}
+					onChange={(e) => setDraft(e.target.value)}
+					onKeyDown={(e) => {
+						if (e.key === "Enter") commit();
+						if (e.key === "Escape") setEditing(false);
+					}}
+					onBlur={commit}
+				/>
+				<Button
+					variant="ghost"
+					size="icon-xs"
+					onMouseDown={(e) => e.preventDefault()}
+					onClick={commit}
+				>
+					<CheckIcon className="size-3.5" />
+				</Button>
+				<Button
+					variant="ghost"
+					size="icon-xs"
+					onMouseDown={(e) => e.preventDefault()}
+					onClick={() => setEditing(false)}
+				>
+					<XIcon className="size-3.5" />
+				</Button>
 			</div>
 		);
 	}
+
 	return (
-		<div className="flex h-full items-center justify-center">
-			<FileIcon className="size-10 text-muted-foreground" />
-		</div>
+		<button
+			type="button"
+			className="group/name flex min-w-0 items-center gap-1 text-left"
+			onClick={startEdit}
+		>
+			<span className="truncate text-sm font-medium">{name}</span>
+			<PencilIcon className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/name:opacity-100" />
+		</button>
 	);
 }
 
@@ -154,7 +206,8 @@ function TagEditor({
 	const addTags = useServerFn(addTagsFn);
 	const removeTag = useServerFn(removeTagFn);
 
-	const tagNames = file.tags.map((t) => t.name);
+	const userTags = file.tags.filter((t) => !t.name.startsWith("system:"));
+	const tagNames = userTags.map((t) => t.name);
 
 	async function handleChange(next: string[]) {
 		const currentSet = new Set(tagNames);
@@ -163,12 +216,13 @@ function TagEditor({
 		const added = next.filter((t) => !currentSet.has(t));
 		const removed = tagNames.filter((t) => !nextSet.has(t));
 
-		// Optimistic update: tag is immutable, name is the unique key
-		const newTags = next.map((name) => {
-			const existing = file.tags.find((t) => t.name === name);
+		// Optimistic update: preserve system tags, update user tags
+		const systemTags = file.tags.filter((t) => t.name.startsWith("system:"));
+		const newUserTags = next.map((name) => {
+			const existing = userTags.find((t) => t.name === name);
 			return existing ?? { id: name, name };
 		});
-		onTagsChange(file.id, newTags);
+		onTagsChange(file.id, [...systemTags, ...newUserTags]);
 
 		if (added.length > 0) {
 			await addTags({
@@ -198,23 +252,50 @@ function TagEditor({
 	);
 }
 
+function toFileRecords(
+	items: Awaited<ReturnType<typeof listFiles>>["items"],
+): FileRecord[] {
+	return items.map((item) => ({
+		...item,
+		metadata: item.metadata as FileRecord["metadata"],
+		created_at: String(item.created_at),
+		tags: item.tags.map((t) => ({ id: t.id, name: t.name })),
+	}));
+}
+
 function AdminPage() {
-	const loaderData = Route.useLoaderData() as FileRecord[];
-	const [files, setFiles] = useState<FileRecord[]>(loaderData);
+	const { items: loaderItems, total } = Route.useLoaderData();
+	const { page } = Route.useSearch();
+	const totalPages = Math.ceil(total / 12);
+	const [files, setFiles] = useState(() => toFileRecords(loaderItems));
 
 	useEffect(() => {
-		setFiles(loaderData);
-	}, [loaderData]);
+		setFiles(toFileRecords(loaderItems));
+	}, [loaderItems]);
 
 	const [dragging, setDragging] = useState(false);
 	const [uploading, setUploading] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState<FileRecord | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const uploadFn = useServerFn(uploadFileFn);
+	const renameFn = useServerFn(renameFileFn);
 	const deleteFn = useServerFn(deleteFileFn);
 
 	function handleTagsChange(fileId: string, tags: TagRecord[]) {
 		setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, tags } : f)));
+	}
+
+	async function handleRename(fileId: string, newName: string) {
+		const trimmed = newName.trim();
+		if (!trimmed) return;
+		setFiles((prev) =>
+			prev.map((f) =>
+				f.id === fileId
+					? { ...f, metadata: { ...f.metadata, originalName: trimmed } }
+					: f,
+			),
+		);
+		await renameFn({ data: { id: fileId, name: trimmed } });
 	}
 
 	async function handleFiles(fileList: FileList | null) {
@@ -313,43 +394,68 @@ function AdminPage() {
 				</div>
 			) : (
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					{files.map((file) => (
-						<div
-							key={file.id}
-							className="group overflow-hidden rounded-xl border bg-card"
-						>
-							<div className="aspect-video w-full bg-muted">
-								<FileCardPreview file={file} />
-							</div>
-							<div className="flex items-start justify-between gap-2 p-3">
-								<div className="min-w-0">
-									<p className="truncate text-sm font-medium">
-										{file.metadata.originalName}
-									</p>
-									<div className="mt-1.5 flex items-center gap-2">
-										{getTypeBadge(file.metadata.mime)}
-										<span className="text-xs text-muted-foreground">
-											{formatSize(file.metadata.size)}
-										</span>
-										<span className="text-xs text-muted-foreground">
-											{new Date(file.created_at).toLocaleDateString()}
-										</span>
-									</div>
+					{files.map((file) => {
+						const categoryName = getCategoryName(file.tags);
+						return (
+							<div
+								key={file.id}
+								className="group overflow-hidden rounded-xl border bg-card"
+							>
+								<div className="relative aspect-video w-full bg-muted">
+									<FilePreview
+										path={file.path}
+										mime={file.metadata.mime}
+										alt={file.metadata.originalName}
+									/>
+									{categoryName ? (
+										<Badge
+											variant="secondary"
+											className="absolute right-2 top-2 bg-background/80 backdrop-blur-sm"
+										>
+											{categoryName}
+										</Badge>
+									) : (
+										<Badge
+											variant="destructive"
+											className="absolute right-2 top-2 backdrop-blur-sm"
+										>
+											未分類
+										</Badge>
+									)}
 								</div>
-								<Button
-									variant="ghost"
-									size="icon-xs"
-									className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-									onClick={() => setDeleteTarget(file)}
-								>
-									<Trash2Icon className="size-3.5 text-destructive" />
-								</Button>
+								<div className="flex items-start justify-between gap-2 p-3">
+									<div className="min-w-0">
+										<FileNameEditor
+											name={file.metadata.originalName}
+											onRename={(n) => handleRename(file.id, n)}
+										/>
+										<div className="mt-1.5 flex items-center gap-2">
+											{getTypeBadge(file.metadata.mime)}
+											<span className="text-xs text-muted-foreground">
+												{formatSize(file.metadata.size)}
+											</span>
+											<span className="text-xs text-muted-foreground">
+												{new Date(file.created_at).toLocaleDateString()}
+											</span>
+										</div>
+									</div>
+									<Button
+										variant="ghost"
+										size="icon-xs"
+										className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+										onClick={() => setDeleteTarget(file)}
+									>
+										<Trash2Icon className="size-3.5 text-destructive" />
+									</Button>
+								</div>
+								<TagEditor file={file} onTagsChange={handleTagsChange} />
 							</div>
-							<TagEditor file={file} onTagsChange={handleTagsChange} />
-						</div>
-					))}
+						);
+					})}
 				</div>
 			)}
+
+			<PaginationBar page={page} totalPages={totalPages} />
 
 			{/* Delete Confirmation */}
 			<AlertDialog
