@@ -391,12 +391,6 @@ function displayTagName(name: string) {
   return name.replace(/^user:/, "");
 }
 
-function formatSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 function getTypeBadge(mime: string) {
   if (mime.startsWith("image/")) return <Badge variant="secondary">圖片</Badge>;
   if (mime.startsWith("video/")) return <Badge variant="secondary">影片</Badge>;
@@ -995,12 +989,6 @@ function AdminPage() {
                   />
                   <div className="mt-1.5 flex items-center gap-2">
                     {getTypeBadge(file.metadata.mime)}
-                    <span className="text-xs text-muted-foreground">
-                      {formatSize(file.metadata.size)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(file.created_at).toLocaleDateString()}
-                    </span>
                   </div>
                 </div>
                 <Button
