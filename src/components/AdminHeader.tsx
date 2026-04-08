@@ -4,7 +4,7 @@ import { Button } from "#/components/ui/button";
 import ThemeToggle from "./ThemeToggle";
 
 const navItems = [
-	{ to: "/admin", label: "檔案管理" },
+	{ to: "/admin", label: "總覽" },
 	{ to: "/admin/category", label: "分類管理" },
 	{ to: "/admin/creator", label: "創作者管理" },
 ] as const;
