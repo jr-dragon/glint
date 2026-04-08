@@ -169,6 +169,47 @@ export async function listCategoryObjects(
 	}));
 }
 
+/** Fetch all objects with their category tags in a single query, then group by category. */
+export async function listAllCategoryObjects(): Promise<{
+	categoryObjects: Record<string, CategoryObject[]>;
+	uncategorizedObjects: CategoryObject[];
+}> {
+	const db = createPrismaClient();
+	const rows = await db.object.findMany({
+		where: { deleted_at: null },
+		include: {
+			tags: {
+				where: { name: { startsWith: CATEGORY_PREFIX } },
+				select: { id: true },
+			},
+		},
+		orderBy: { created_at: "desc" },
+	});
+
+	const categoryObjects: Record<string, CategoryObject[]> = {};
+	const uncategorizedObjects: CategoryObject[] = [];
+
+	for (const r of rows) {
+		const obj: CategoryObject = {
+			id: r.id,
+			path: r.path,
+			metadata: r.metadata as CategoryObject["metadata"],
+		};
+		if (r.tags.length === 0) {
+			uncategorizedObjects.push(obj);
+		} else {
+			for (const tag of r.tags) {
+				if (!categoryObjects[tag.id]) {
+					categoryObjects[tag.id] = [];
+				}
+				categoryObjects[tag.id].push(obj);
+			}
+		}
+	}
+
+	return { categoryObjects, uncategorizedObjects };
+}
+
 export async function bindObjectToCategory(
 	objectId: string,
 	categoryId: string,

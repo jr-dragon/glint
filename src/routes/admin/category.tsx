@@ -61,8 +61,8 @@ import {
 	type CategoryRecord,
 	createCategory,
 	deleteCategory,
+	listAllCategoryObjects,
 	listCategories,
-	listCategoryObjects,
 	unbindObjectFromCategory,
 	updateCategory,
 } from "#/lib/storage";
@@ -70,23 +70,10 @@ import {
 // --- Server Functions ---
 
 const listCategoriesFn = createServerFn({ method: "GET" }).handler(async () => {
-	const categories = await listCategories();
-	const uncategorized = await listCategoryObjects(null);
+	const [categories, { categoryObjects, uncategorizedObjects }] =
+		await Promise.all([listCategories(), listAllCategoryObjects()]);
 
-	const categoryObjects = await Promise.all(
-		categories.map(async (cat) => ({
-			categoryId: cat.id,
-			objects: await listCategoryObjects(cat.id),
-		})),
-	);
-
-	return {
-		categories,
-		uncategorizedObjects: uncategorized,
-		categoryObjects: Object.fromEntries(
-			categoryObjects.map((co) => [co.categoryId, co.objects]),
-		),
-	};
+	return { categories, uncategorizedObjects, categoryObjects };
 });
 
 const createCategoryFn = createServerFn({ method: "POST" })
