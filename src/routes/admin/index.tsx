@@ -36,6 +36,17 @@ import {
 	CommandList,
 } from "#/components/ui/command";
 import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "#/components/ui/dialog";
+import { Input } from "#/components/ui/input";
+import { Label } from "#/components/ui/label";
+import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
@@ -53,6 +64,7 @@ import {
 	removeTagFromFile,
 	renameFile,
 	unbindObjectFromCreator,
+	updateCreator,
 	uploadFile,
 } from "#/lib/storage";
 
@@ -106,6 +118,18 @@ const createCreatorFn = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ name: z.string().min(1) }))
 	.handler(async ({ data }) => {
 		return createCreator(data.name);
+	});
+
+const updateCreatorFn = createServerFn({ method: "POST" })
+	.inputValidator(
+		z.object({
+			id: z.string(),
+			name: z.string().min(1),
+			metadata: z.record(z.string(), z.string()).nullable(),
+		}),
+	)
+	.handler(async ({ data }) => {
+		return updateCreator(data.id, data.name, data.metadata);
 	});
 
 const bindCreatorFn = createServerFn({ method: "POST" })
@@ -307,7 +331,15 @@ function CreatorEditor({
 	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const [search, setSearch] = useState("");
+	const [editTarget, setEditTarget] = useState<{
+		id: string;
+		name: string;
+		facebook: string;
+		twitter: string;
+		pixiv: string;
+	} | null>(null);
 	const createCrt = useServerFn(createCreatorFn);
+	const updateCrt = useServerFn(updateCreatorFn);
 	const bindCreator = useServerFn(bindCreatorFn);
 	const unbindCreator = useServerFn(unbindCreatorFn);
 
@@ -325,6 +357,32 @@ function CreatorEditor({
 		(c) => c.name.toLowerCase() === trimmed.toLowerCase(),
 	);
 	const showCreate = trimmed.length > 0 && !hasExactMatch;
+
+	function openEditDialog(tag: TagRecord) {
+		const meta = (tag.metadata ?? {}) as Record<string, string>;
+		setEditTarget({
+			id: tag.id,
+			name: tag.name.slice(CREATOR_PREFIX.length),
+			facebook: meta.facebook ?? "",
+			twitter: meta.twitter ?? "",
+			pixiv: meta.pixiv ?? "",
+		});
+	}
+
+	async function handleEditSave() {
+		if (!editTarget) return;
+		const metadata: Record<string, string> = {};
+		if (editTarget.facebook.trim())
+			metadata.facebook = editTarget.facebook.trim();
+		if (editTarget.twitter.trim()) metadata.twitter = editTarget.twitter.trim();
+		if (editTarget.pixiv.trim()) metadata.pixiv = editTarget.pixiv.trim();
+		const meta = Object.keys(metadata).length > 0 ? metadata : null;
+		await updateCrt({
+			data: { id: editTarget.id, name: editTarget.name, metadata: meta },
+		});
+		setEditTarget(null);
+		router.invalidate();
+	}
 
 	async function handleBind(creator: CreatorRecord) {
 		onCreatorsChange(file.id, [
@@ -365,43 +423,52 @@ function CreatorEditor({
 		<div className="flex flex-wrap items-center gap-1.5 border-t px-3 py-2">
 			{boundCreatorTags.map((tag) => {
 				const meta = (tag.metadata ?? {}) as Record<string, string>;
+				const hasLinks = meta.facebook || meta.twitter || meta.pixiv;
 				return (
 					<Badge key={tag.id} variant="outline" className="gap-1 pr-1">
-						<span className="text-xs">
+						<button
+							type="button"
+							className="text-xs hover:underline"
+							onClick={() => openEditDialog(tag)}
+						>
 							@{tag.name.slice(CREATOR_PREFIX.length)}
-						</span>
-						{meta.url && (
-							<a
-								href={meta.url}
-								target="_blank"
-								rel="noopener noreferrer"
-								className="text-xs opacity-60 hover:opacity-100"
-								title="Website"
-							>
-								🔗
-							</a>
-						)}
-						{meta.twitter && (
-							<a
-								href={`https://x.com/${meta.twitter}`}
-								target="_blank"
-								rel="noopener noreferrer"
-								className="text-xs opacity-60 hover:opacity-100"
-								title={`@${meta.twitter}`}
-							>
-								𝕏
-							</a>
-						)}
-						{meta.pixiv && (
-							<a
-								href={`https://www.pixiv.net/users/${meta.pixiv}`}
-								target="_blank"
-								rel="noopener noreferrer"
-								className="text-xs opacity-60 hover:opacity-100"
-								title="Pixiv"
-							>
-								P
-							</a>
+						</button>
+						{hasLinks && (
+							<span className="flex items-center gap-0.5">
+								{meta.facebook && (
+									<a
+										href={meta.facebook}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-xs opacity-60 hover:opacity-100"
+										title="Facebook"
+									>
+										f
+									</a>
+								)}
+								{meta.twitter && (
+									<a
+										href={meta.twitter}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-xs opacity-60 hover:opacity-100"
+										title="Twitter / X"
+									>
+										𝕏
+									</a>
+								)}
+								{meta.pixiv && (
+									<a
+										href={meta.pixiv}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-xs opacity-60 hover:opacity-100"
+										title="Pixiv"
+									>
+										P
+									</a>
+								)}
+							</span>
 						)}
 						<button
 							type="button"
@@ -465,6 +532,71 @@ function CreatorEditor({
 					</Command>
 				</PopoverContent>
 			</Popover>
+
+			{/* Edit Creator Dialog */}
+			<Dialog
+				open={!!editTarget}
+				onOpenChange={(v) => !v && setEditTarget(null)}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>編輯創作者「{editTarget?.name}」</DialogTitle>
+						<DialogDescription>設定創作者的社群連結</DialogDescription>
+					</DialogHeader>
+					{editTarget && (
+						<div className="grid gap-4 py-2">
+							<div className="grid gap-2">
+								<Label htmlFor="creator-facebook">Facebook</Label>
+								<Input
+									id="creator-facebook"
+									value={editTarget.facebook}
+									onChange={(e) =>
+										setEditTarget({
+											...editTarget,
+											facebook: e.target.value,
+										})
+									}
+									placeholder="https://www.facebook.com/..."
+								/>
+							</div>
+							<div className="grid gap-2">
+								<Label htmlFor="creator-twitter">Twitter / X</Label>
+								<Input
+									id="creator-twitter"
+									value={editTarget.twitter}
+									onChange={(e) =>
+										setEditTarget({
+											...editTarget,
+											twitter: e.target.value,
+										})
+									}
+									placeholder="https://x.com/..."
+								/>
+							</div>
+							<div className="grid gap-2">
+								<Label htmlFor="creator-pixiv">Pixiv</Label>
+								<Input
+									id="creator-pixiv"
+									value={editTarget.pixiv}
+									onChange={(e) =>
+										setEditTarget({
+											...editTarget,
+											pixiv: e.target.value,
+										})
+									}
+									placeholder="https://www.pixiv.net/users/..."
+								/>
+							</div>
+						</div>
+					)}
+					<DialogFooter>
+						<DialogClose asChild>
+							<Button variant="outline">取消</Button>
+						</DialogClose>
+						<Button onClick={handleEditSave}>儲存</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

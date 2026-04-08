@@ -130,7 +130,7 @@ export const Route = createFileRoute("/admin/creator")({
 // --- Types ---
 
 interface MetadataFields {
-	url?: string;
+	facebook?: string;
 	twitter?: string;
 	pixiv?: string;
 }
@@ -183,7 +183,7 @@ function CreatorPage() {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [editTarget, setEditTarget] = useState<CreatorRecord | null>(null);
 	const [formName, setFormName] = useState("");
-	const [formUrl, setFormUrl] = useState("");
+	const [formFacebook, setFormFacebook] = useState("");
 	const [formTwitter, setFormTwitter] = useState("");
 	const [formPixiv, setFormPixiv] = useState("");
 	const [deleteTarget, setDeleteTarget] = useState<CreatorRecord | null>(null);
@@ -199,7 +199,7 @@ function CreatorPage() {
 
 	function buildMetadata(): Record<string, string> | null {
 		const meta: Record<string, string> = {};
-		if (formUrl.trim()) meta.url = formUrl.trim();
+		if (formFacebook.trim()) meta.facebook = formFacebook.trim();
 		if (formTwitter.trim()) meta.twitter = formTwitter.trim();
 		if (formPixiv.trim()) meta.pixiv = formPixiv.trim();
 		return Object.keys(meta).length > 0 ? meta : null;
@@ -208,7 +208,7 @@ function CreatorPage() {
 	function openCreate() {
 		setEditTarget(null);
 		setFormName("");
-		setFormUrl("");
+		setFormFacebook("");
 		setFormTwitter("");
 		setFormPixiv("");
 		setEditDialogOpen(true);
@@ -218,7 +218,7 @@ function CreatorPage() {
 		setEditTarget(creator);
 		setFormName(creator.name);
 		const meta = (creator.metadata ?? {}) as MetadataFields;
-		setFormUrl(meta.url ?? "");
+		setFormFacebook(meta.facebook ?? "");
 		setFormTwitter(meta.twitter ?? "");
 		setFormPixiv(meta.pixiv ?? "");
 		setEditDialogOpen(true);
@@ -321,29 +321,29 @@ function CreatorPage() {
 								<div className="mb-3 flex items-center gap-3">
 									<span className="font-medium">{creator.name}</span>
 									<Badge variant="secondary">{creator.objectCount}</Badge>
-									{meta.url && (
+									{meta.facebook && (
 										<a
-											href={meta.url}
+											href={meta.facebook}
 											target="_blank"
 											rel="noopener noreferrer"
 											className="text-xs text-muted-foreground hover:underline"
 										>
-											Website
+											Facebook
 										</a>
 									)}
 									{meta.twitter && (
 										<a
-											href={`https://x.com/${meta.twitter}`}
+											href={meta.twitter}
 											target="_blank"
 											rel="noopener noreferrer"
 											className="text-xs text-muted-foreground hover:underline"
 										>
-											@{meta.twitter}
+											Twitter
 										</a>
 									)}
 									{meta.pixiv && (
 										<a
-											href={`https://www.pixiv.net/users/${meta.pixiv}`}
+											href={meta.pixiv}
 											target="_blank"
 											rel="noopener noreferrer"
 											className="text-xs text-muted-foreground hover:underline"
@@ -480,12 +480,12 @@ function CreatorPage() {
 							/>
 						</div>
 						<div className="grid gap-2">
-							<Label htmlFor="creator-url">個人網站</Label>
+							<Label htmlFor="creator-facebook">Facebook</Label>
 							<Input
-								id="creator-url"
-								value={formUrl}
-								onChange={(e) => setFormUrl(e.target.value)}
-								placeholder="https://example.com"
+								id="creator-facebook"
+								value={formFacebook}
+								onChange={(e) => setFormFacebook(e.target.value)}
+								placeholder="https://www.facebook.com/..."
 							/>
 						</div>
 						<div className="grid gap-2">
@@ -494,16 +494,16 @@ function CreatorPage() {
 								id="creator-twitter"
 								value={formTwitter}
 								onChange={(e) => setFormTwitter(e.target.value)}
-								placeholder="username（不含 @）"
+								placeholder="https://x.com/..."
 							/>
 						</div>
 						<div className="grid gap-2">
-							<Label htmlFor="creator-pixiv">Pixiv ID</Label>
+							<Label htmlFor="creator-pixiv">Pixiv</Label>
 							<Input
 								id="creator-pixiv"
 								value={formPixiv}
 								onChange={(e) => setFormPixiv(e.target.value)}
-								placeholder="12345678"
+								placeholder="https://www.pixiv.net/users/..."
 							/>
 						</div>
 					</div>
