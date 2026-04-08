@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Accordion as AccordionPrimitive } from "radix-ui";
 import { useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod/v4";
 import { FilePreview } from "#/components/FilePreview";
 import {
@@ -189,30 +190,48 @@ function CategoryPage() {
 
 	async function handleSave() {
 		if (!formName.trim()) return;
-		if (editTarget) {
-			await updateCat({ data: { id: editTarget.id, name: formName.trim() } });
-		} else {
-			await createCat({ data: { name: formName.trim() } });
+		try {
+			if (editTarget) {
+				await updateCat({
+					data: { id: editTarget.id, name: formName.trim() },
+				});
+			} else {
+				await createCat({ data: { name: formName.trim() } });
+			}
+			setEditDialogOpen(false);
+			router.invalidate();
+		} catch {
+			toast.error(editTarget ? "分類更新失敗" : "分類新增失敗");
 		}
-		setEditDialogOpen(false);
-		router.invalidate();
 	}
 
 	async function handleDelete() {
 		if (!deleteTarget) return;
-		await deleteCat({ data: { id: deleteTarget.id } });
-		setDeleteTarget(null);
-		router.invalidate();
+		try {
+			await deleteCat({ data: { id: deleteTarget.id } });
+			setDeleteTarget(null);
+			router.invalidate();
+		} catch {
+			toast.error("分類刪除失敗");
+		}
 	}
 
 	async function handleBind(categoryId: string, objectId: string) {
-		await bindObj({ data: { objectId, categoryId } });
-		router.invalidate();
+		try {
+			await bindObj({ data: { objectId, categoryId } });
+			router.invalidate();
+		} catch {
+			toast.error("綁定失敗");
+		}
 	}
 
 	async function handleUnbind(categoryId: string, objectId: string) {
-		await unbindObj({ data: { objectId, categoryId } });
-		router.invalidate();
+		try {
+			await unbindObj({ data: { objectId, categoryId } });
+			router.invalidate();
+		} catch {
+			toast.error("解除綁定失敗");
+		}
 	}
 
 	return (
