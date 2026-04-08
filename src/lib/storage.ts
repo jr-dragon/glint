@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { uuidv7 } from "uuidv7";
+import { CATEGORY_PREFIX } from "#/lib/constants";
 import { createPrismaClient } from "#/lib/db";
 
 interface UploadResult {
@@ -89,8 +90,6 @@ export async function removeTagFromFile(
 }
 
 // --- Category (implemented as system:category:{value} tags) ---
-
-import { CATEGORY_PREFIX } from "#/lib/constants";
 
 export interface CategoryRecord {
 	id: string;
