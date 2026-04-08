@@ -6,6 +6,7 @@ import ThemeToggle from "./ThemeToggle";
 const navItems = [
 	{ to: "/admin", label: "檔案管理" },
 	{ to: "/admin/category", label: "分類管理" },
+	{ to: "/admin/creator", label: "創作者管理" },
 ] as const;
 
 export default function AdminHeader() {

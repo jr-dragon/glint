@@ -1,0 +1,542 @@
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createServerFn, useServerFn } from "@tanstack/react-start";
+import {
+	EditIcon,
+	LinkIcon,
+	PlusIcon,
+	Trash2Icon,
+	UnlinkIcon,
+	UsersIcon,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { z } from "zod/v4";
+import { FilePreview } from "#/components/FilePreview";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "#/components/ui/alert-dialog";
+import { Badge } from "#/components/ui/badge";
+import { Button } from "#/components/ui/button";
+import { Card } from "#/components/ui/card";
+import {
+	Carousel,
+	CarouselContent,
+	CarouselItem,
+	CarouselNext,
+	CarouselPrevious,
+} from "#/components/ui/carousel";
+import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "#/components/ui/dialog";
+import {
+	Empty,
+	EmptyDescription,
+	EmptyHeader,
+	EmptyTitle,
+} from "#/components/ui/empty";
+import { Input } from "#/components/ui/input";
+import { Label } from "#/components/ui/label";
+import {
+	bindObjectToCreator,
+	type CategoryObject,
+	type CreatorRecord,
+	createCreator,
+	deleteCreator,
+	listCreators,
+	listFiles,
+	unbindObjectFromCreator,
+	updateCreator,
+} from "#/lib/storage";
+
+// --- Server Functions ---
+
+const listCreatorsFn = createServerFn({ method: "GET" })
+	.inputValidator(z.object({ page: z.number().int().min(1) }))
+	.handler(async ({ data }) => {
+		const [creators, { items, total }] = await Promise.all([
+			listCreators(),
+			listFiles(data.page),
+		]);
+		return { creators, objects: items, total };
+	});
+
+const createCreatorFn = createServerFn({ method: "POST" })
+	.inputValidator(
+		z.object({
+			name: z.string().min(1),
+			metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+		}),
+	)
+	.handler(async ({ data }) => {
+		return createCreator(data.name, data.metadata);
+	});
+
+const updateCreatorFn = createServerFn({ method: "POST" })
+	.inputValidator(
+		z.object({
+			id: z.string(),
+			name: z.string().min(1),
+			metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+		}),
+	)
+	.handler(async ({ data }) => {
+		return updateCreator(data.id, data.name, data.metadata);
+	});
+
+const deleteCreatorFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ id: z.string() }))
+	.handler(async ({ data }) => {
+		await deleteCreator(data.id);
+	});
+
+const bindObjectFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ objectId: z.string(), creatorId: z.string() }))
+	.handler(async ({ data }) => {
+		await bindObjectToCreator(data.objectId, data.creatorId);
+	});
+
+const unbindObjectFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ objectId: z.string(), creatorId: z.string() }))
+	.handler(async ({ data }) => {
+		await unbindObjectFromCreator(data.objectId, data.creatorId);
+	});
+
+// --- Route ---
+
+const searchSchema = z.object({
+	page: z.coerce.number().int().min(1).catch(1),
+});
+
+export const Route = createFileRoute("/admin/creator")({
+	component: CreatorPage,
+	validateSearch: searchSchema,
+	loaderDeps: ({ search }) => ({ page: search.page }),
+	loader: ({ deps }) => listCreatorsFn({ data: { page: deps.page } }),
+});
+
+// --- Types ---
+
+interface MetadataFields {
+	url?: string;
+	twitter?: string;
+	pixiv?: string;
+}
+
+// --- Components ---
+
+function ObjectCarousel({
+	objects,
+	action,
+}: {
+	objects: CategoryObject[];
+	action: (obj: CategoryObject) => React.ReactNode;
+}) {
+	return (
+		<Carousel opts={{ align: "start" }} className="mx-auto w-full">
+			<CarouselContent>
+				{objects.map((obj) => (
+					<CarouselItem
+						key={obj.id}
+						className="basis-1/2 sm:basis-1/3 lg:basis-1/4"
+					>
+						<Card className="group overflow-hidden">
+							<div className="aspect-video w-full">
+								<FilePreview
+									path={obj.path}
+									mime={obj.metadata.mime}
+									alt={obj.metadata.originalName}
+								/>
+							</div>
+							<div className="flex items-center justify-between gap-2 px-3 py-2">
+								<span className="truncate text-sm font-medium">
+									{obj.metadata.originalName}
+								</span>
+								{action(obj)}
+							</div>
+						</Card>
+					</CarouselItem>
+				))}
+			</CarouselContent>
+			<CarouselPrevious className="-left-4" />
+			<CarouselNext className="-right-4" />
+		</Carousel>
+	);
+}
+
+function CreatorPage() {
+	const loaderData = Route.useLoaderData();
+	const router = useRouter();
+
+	const [editDialogOpen, setEditDialogOpen] = useState(false);
+	const [editTarget, setEditTarget] = useState<CreatorRecord | null>(null);
+	const [formName, setFormName] = useState("");
+	const [formUrl, setFormUrl] = useState("");
+	const [formTwitter, setFormTwitter] = useState("");
+	const [formPixiv, setFormPixiv] = useState("");
+	const [deleteTarget, setDeleteTarget] = useState<CreatorRecord | null>(null);
+	const [bindTarget, setBindTarget] = useState<CreatorRecord | null>(null);
+
+	const createCrt = useServerFn(createCreatorFn);
+	const updateCrt = useServerFn(updateCreatorFn);
+	const deleteCrt = useServerFn(deleteCreatorFn);
+	const bindObj = useServerFn(bindObjectFn);
+	const unbindObj = useServerFn(unbindObjectFn);
+
+	const { creators, objects } = loaderData;
+
+	function buildMetadata(): MetadataFields | null {
+		const meta: MetadataFields = {};
+		if (formUrl.trim()) meta.url = formUrl.trim();
+		if (formTwitter.trim()) meta.twitter = formTwitter.trim();
+		if (formPixiv.trim()) meta.pixiv = formPixiv.trim();
+		return Object.keys(meta).length > 0 ? meta : null;
+	}
+
+	function openCreate() {
+		setEditTarget(null);
+		setFormName("");
+		setFormUrl("");
+		setFormTwitter("");
+		setFormPixiv("");
+		setEditDialogOpen(true);
+	}
+
+	function openEdit(creator: CreatorRecord) {
+		setEditTarget(creator);
+		setFormName(creator.name);
+		const meta = (creator.metadata ?? {}) as MetadataFields;
+		setFormUrl(meta.url ?? "");
+		setFormTwitter(meta.twitter ?? "");
+		setFormPixiv(meta.pixiv ?? "");
+		setEditDialogOpen(true);
+	}
+
+	async function handleSave() {
+		if (!formName.trim()) return;
+		const metadata = buildMetadata();
+		try {
+			if (editTarget) {
+				await updateCrt({
+					data: { id: editTarget.id, name: formName.trim(), metadata },
+				});
+			} else {
+				await createCrt({ data: { name: formName.trim(), metadata } });
+			}
+			setEditDialogOpen(false);
+			router.invalidate();
+		} catch {
+			toast.error(editTarget ? "創作者更新失敗" : "創作者新增失敗");
+		}
+	}
+
+	async function handleDelete() {
+		if (!deleteTarget) return;
+		try {
+			await deleteCrt({ data: { id: deleteTarget.id } });
+			setDeleteTarget(null);
+			router.invalidate();
+		} catch {
+			toast.error("創作者刪除失敗");
+		}
+	}
+
+	async function handleBind(creatorId: string, objectId: string) {
+		try {
+			await bindObj({ data: { objectId, creatorId } });
+			router.invalidate();
+		} catch {
+			toast.error("綁定失敗");
+		}
+	}
+
+	async function handleUnbind(creatorId: string, objectId: string) {
+		try {
+			await unbindObj({ data: { objectId, creatorId } });
+			router.invalidate();
+		} catch {
+			toast.error("解除綁定失敗");
+		}
+	}
+
+	// Build per-creator bound objects from the loaded objects
+	const creatorBoundObjects: Record<string, CategoryObject[]> = {};
+	for (const creator of creators) {
+		creatorBoundObjects[creator.id] = [];
+	}
+	for (const obj of objects) {
+		const tags = (obj as { tags?: { name: string; id: string }[] }).tags ?? [];
+		for (const tag of tags) {
+			if (creatorBoundObjects[tag.id]) {
+				creatorBoundObjects[tag.id].push({
+					id: obj.id,
+					path: obj.path,
+					metadata: obj.metadata as CategoryObject["metadata"],
+				});
+			}
+		}
+	}
+
+	return (
+		<>
+			<div className="mb-6 flex items-center justify-between">
+				<h1 className="text-2xl font-bold tracking-tight">創作者管理</h1>
+				<Button size="sm" onClick={openCreate}>
+					<PlusIcon className="size-4" />
+					新增創作者
+				</Button>
+			</div>
+
+			{creators.length === 0 ? (
+				<Empty className="border">
+					<UsersIcon className="size-10 text-muted-foreground" />
+					<EmptyHeader>
+						<EmptyTitle>尚無創作者</EmptyTitle>
+						<EmptyDescription>建立創作者來標記你的媒體檔案</EmptyDescription>
+					</EmptyHeader>
+					<Button size="sm" onClick={openCreate}>
+						<PlusIcon className="size-4" />
+						新增創作者
+					</Button>
+				</Empty>
+			) : (
+				<div className="grid gap-4">
+					{creators.map((creator) => {
+						const bound = creatorBoundObjects[creator.id] ?? [];
+						const meta = (creator.metadata ?? {}) as MetadataFields;
+						return (
+							<Card key={creator.id} className="p-4">
+								<div className="mb-3 flex items-center gap-3">
+									<span className="font-medium">{creator.name}</span>
+									<Badge variant="secondary">{creator.objectCount}</Badge>
+									{meta.url && (
+										<a
+											href={meta.url}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="text-xs text-muted-foreground hover:underline"
+										>
+											Website
+										</a>
+									)}
+									{meta.twitter && (
+										<a
+											href={`https://x.com/${meta.twitter}`}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="text-xs text-muted-foreground hover:underline"
+										>
+											@{meta.twitter}
+										</a>
+									)}
+									{meta.pixiv && (
+										<a
+											href={`https://www.pixiv.net/users/${meta.pixiv}`}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="text-xs text-muted-foreground hover:underline"
+										>
+											Pixiv
+										</a>
+									)}
+									<div className="ml-auto flex items-center gap-1">
+										<Button
+											variant="ghost"
+											size="icon-xs"
+											onClick={() =>
+												setBindTarget(
+													bindTarget?.id === creator.id ? null : creator,
+												)
+											}
+											title="綁定物件"
+										>
+											<LinkIcon className="size-3.5" />
+										</Button>
+										<Button
+											variant="ghost"
+											size="icon-xs"
+											onClick={() => openEdit(creator)}
+											title="編輯"
+										>
+											<EditIcon className="size-3.5" />
+										</Button>
+										<Button
+											variant="ghost"
+											size="icon-xs"
+											onClick={() => setDeleteTarget(creator)}
+											title="刪除"
+										>
+											<Trash2Icon className="size-3.5 text-destructive" />
+										</Button>
+									</div>
+								</div>
+
+								{/* Bound objects */}
+								{bound.length > 0 && (
+									<div className="mb-3">
+										<h4 className="mb-2 text-sm font-medium">
+											已綁定（{bound.length}）
+										</h4>
+										<ObjectCarousel
+											objects={bound}
+											action={(obj) => (
+												<Button
+													variant="ghost"
+													size="icon-xs"
+													className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+													onClick={() => handleUnbind(creator.id, obj.id)}
+													title="解除綁定"
+												>
+													<UnlinkIcon className="size-3.5 text-destructive" />
+												</Button>
+											)}
+										/>
+									</div>
+								)}
+
+								{/* Bind panel */}
+								{bindTarget?.id === creator.id && (
+									<div>
+										<h4 className="mb-2 text-sm font-medium">
+											所有物件（選取以綁定）
+										</h4>
+										{objects.length === 0 ? (
+											<p className="text-sm text-muted-foreground">
+												尚無可綁定的物件
+											</p>
+										) : (
+											<ObjectCarousel
+												objects={objects.map((o) => ({
+													id: o.id,
+													path: o.path,
+													metadata: o.metadata as CategoryObject["metadata"],
+												}))}
+												action={(obj) => {
+													const alreadyBound = bound.some(
+														(b) => b.id === obj.id,
+													);
+													if (alreadyBound) {
+														return (
+															<Badge variant="outline" className="text-xs">
+																已綁定
+															</Badge>
+														);
+													}
+													return (
+														<Button
+															variant="ghost"
+															size="icon-xs"
+															className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+															onClick={() => handleBind(creator.id, obj.id)}
+															title="綁定至此創作者"
+														>
+															<LinkIcon className="size-3.5" />
+														</Button>
+													);
+												}}
+											/>
+										)}
+									</div>
+								)}
+							</Card>
+						);
+					})}
+				</div>
+			)}
+
+			{/* Create / Edit Dialog */}
+			<Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>
+							{editTarget ? "編輯創作者" : "新增創作者"}
+						</DialogTitle>
+						<DialogDescription>
+							{editTarget
+								? "修改創作者的名稱與社群資訊"
+								: "建立一個新的創作者來標記你的媒體檔案"}
+						</DialogDescription>
+					</DialogHeader>
+					<div className="grid gap-4 py-2">
+						<div className="grid gap-2">
+							<Label htmlFor="creator-name">名稱</Label>
+							<Input
+								id="creator-name"
+								value={formName}
+								onChange={(e) => setFormName(e.target.value)}
+								placeholder="例如：張三"
+							/>
+						</div>
+						<div className="grid gap-2">
+							<Label htmlFor="creator-url">個人網站</Label>
+							<Input
+								id="creator-url"
+								value={formUrl}
+								onChange={(e) => setFormUrl(e.target.value)}
+								placeholder="https://example.com"
+							/>
+						</div>
+						<div className="grid gap-2">
+							<Label htmlFor="creator-twitter">Twitter / X</Label>
+							<Input
+								id="creator-twitter"
+								value={formTwitter}
+								onChange={(e) => setFormTwitter(e.target.value)}
+								placeholder="username（不含 @）"
+							/>
+						</div>
+						<div className="grid gap-2">
+							<Label htmlFor="creator-pixiv">Pixiv ID</Label>
+							<Input
+								id="creator-pixiv"
+								value={formPixiv}
+								onChange={(e) => setFormPixiv(e.target.value)}
+								placeholder="12345678"
+							/>
+						</div>
+					</div>
+					<DialogFooter>
+						<DialogClose asChild>
+							<Button variant="outline">取消</Button>
+						</DialogClose>
+						<Button onClick={handleSave} disabled={!formName.trim()}>
+							{editTarget ? "儲存" : "新增"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Delete Confirmation */}
+			<AlertDialog
+				open={!!deleteTarget}
+				onOpenChange={(open) => !open && setDeleteTarget(null)}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>確認刪除</AlertDialogTitle>
+						<AlertDialogDescription>
+							即將刪除創作者「{deleteTarget?.name}
+							」，已綁定的物件將被解除關聯。此操作無法復原，確定要繼續嗎？
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>取消</AlertDialogCancel>
+						<AlertDialogAction onClick={handleDelete}>刪除</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</>
+	);
+}

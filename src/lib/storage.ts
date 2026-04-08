@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { uuidv7 } from "uuidv7";
-import { CATEGORY_PREFIX } from "#/lib/constants";
+import { CATEGORY_PREFIX, CREATOR_PREFIX } from "#/lib/constants";
 import { createPrismaClient } from "#/lib/db";
 
 interface UploadResult {
@@ -269,5 +269,103 @@ export async function unbindObjectFromCategory(
 	await db.object.update({
 		where: { id: objectId },
 		data: { tags: { disconnect: { id: categoryId } } },
+	});
+}
+
+// --- Creator (implemented as system:creator:{value} tags) ---
+
+export interface CreatorRecord {
+	id: string;
+	name: string;
+	value: string;
+	metadata: Record<string, unknown> | null;
+	objectCount: number;
+}
+
+export async function listCreators(): Promise<CreatorRecord[]> {
+	const db = createPrismaClient();
+	const tags = await db.tag.findMany({
+		where: { name: { startsWith: CREATOR_PREFIX } },
+		include: {
+			objects: { where: { deleted_at: null }, select: { id: true } },
+		},
+		orderBy: { created_at: "asc" },
+	});
+
+	return tags.map((tag) => ({
+		id: tag.id,
+		name: tag.name.slice(CREATOR_PREFIX.length),
+		value: tag.name,
+		metadata: tag.metadata as Record<string, unknown> | null,
+		objectCount: tag.objects.length,
+	}));
+}
+
+export async function createCreator(
+	name: string,
+	metadata?: Record<string, unknown> | null,
+): Promise<CreatorRecord> {
+	const db = createPrismaClient();
+	const tagName = `${CREATOR_PREFIX}${name}`;
+	const tag = await db.tag.create({
+		data: { name: tagName, metadata: metadata ?? undefined },
+	});
+	return {
+		id: tag.id,
+		name,
+		value: tag.name,
+		metadata: (tag.metadata as Record<string, unknown> | null) ?? null,
+		objectCount: 0,
+	};
+}
+
+export async function updateCreator(
+	id: string,
+	newName: string,
+	metadata?: Record<string, unknown> | null,
+): Promise<CreatorRecord> {
+	const db = createPrismaClient();
+	const tagName = `${CREATOR_PREFIX}${newName}`;
+	const data: { name: string; metadata?: unknown } = { name: tagName };
+	if (metadata !== undefined) {
+		data.metadata = metadata;
+	}
+	const tag = await db.tag.update({ where: { id }, data });
+	const count = await db.object.count({
+		where: { deleted_at: null, tags: { some: { id } } },
+	});
+	return {
+		id: tag.id,
+		name: newName,
+		value: tag.name,
+		metadata: (tag.metadata as Record<string, unknown> | null) ?? null,
+		objectCount: count,
+	};
+}
+
+export async function deleteCreator(id: string): Promise<void> {
+	const db = createPrismaClient();
+	await db.tag.delete({ where: { id } });
+}
+
+export async function bindObjectToCreator(
+	objectId: string,
+	creatorId: string,
+): Promise<void> {
+	const db = createPrismaClient();
+	await db.object.update({
+		where: { id: objectId },
+		data: { tags: { connect: { id: creatorId } } },
+	});
+}
+
+export async function unbindObjectFromCreator(
+	objectId: string,
+	creatorId: string,
+): Promise<void> {
+	const db = createPrismaClient();
+	await db.object.update({
+		where: { id: objectId },
+		data: { tags: { disconnect: { id: creatorId } } },
 	});
 }

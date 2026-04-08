@@ -83,6 +83,7 @@ export type ObjectScalarFieldEnum = (typeof ObjectScalarFieldEnum)[keyof typeof 
 export const TagScalarFieldEnum = {
   id: 'id',
   name: 'name',
+  metadata: 'metadata',
   created_at: 'created_at',
   updated_at: 'updated_at'
 } as const
@@ -103,6 +104,14 @@ export const JsonNullValueInput = {
 } as const
 
 export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
 export const JsonNullValueFilter = {

@@ -26,7 +26,7 @@ import {
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { TagsInput } from "#/components/ui/tags-input";
-import { CATEGORY_PREFIX } from "#/lib/constants";
+import { CATEGORY_PREFIX, CREATOR_PREFIX } from "#/lib/constants";
 import {
 	addTagsToFile,
 	deleteFile,
@@ -92,6 +92,14 @@ export const Route = createFileRoute("/admin/")({
 interface TagRecord {
 	id: string;
 	name: string;
+	metadata?: unknown;
+}
+
+interface CreatorInfo {
+	name: string;
+	url?: string;
+	twitter?: string;
+	pixiv?: string;
 }
 
 interface FileRecord {
@@ -105,6 +113,20 @@ interface FileRecord {
 function getCategoryName(tags: TagRecord[]): string | null {
 	const tag = tags.find((t) => t.name.startsWith(CATEGORY_PREFIX));
 	return tag ? tag.name.slice(CATEGORY_PREFIX.length) : null;
+}
+
+function getCreators(tags: TagRecord[]): CreatorInfo[] {
+	return tags
+		.filter((t) => t.name.startsWith(CREATOR_PREFIX))
+		.map((t) => {
+			const meta = (t.metadata ?? {}) as Record<string, string>;
+			return {
+				name: t.name.slice(CREATOR_PREFIX.length),
+				url: meta.url,
+				twitter: meta.twitter,
+				pixiv: meta.pixiv,
+			};
+		});
 }
 
 function displayTagName(name: string) {
@@ -259,7 +281,11 @@ function toFileRecords(
 		...item,
 		metadata: item.metadata as FileRecord["metadata"],
 		created_at: String(item.created_at),
-		tags: item.tags.map((t) => ({ id: t.id, name: t.name })),
+		tags: item.tags.map((t) => ({
+			id: t.id,
+			name: t.name,
+			metadata: t.metadata,
+		})),
 	}));
 }
 
@@ -396,6 +422,7 @@ function AdminPage() {
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{files.map((file) => {
 						const categoryName = getCategoryName(file.tags);
+						const creators = getCreators(file.tags);
 						return (
 							<div
 								key={file.id}
@@ -407,21 +434,20 @@ function AdminPage() {
 										mime={file.metadata.mime}
 										alt={file.metadata.originalName}
 									/>
-									{categoryName ? (
-										<Badge
-											variant="secondary"
-											className="absolute right-2 top-2 bg-background/80 backdrop-blur-sm"
-										>
-											{categoryName}
-										</Badge>
-									) : (
-										<Badge
-											variant="destructive"
-											className="absolute right-2 top-2 backdrop-blur-sm"
-										>
-											未分類
-										</Badge>
-									)}
+									<div className="absolute right-2 top-2 flex flex-col items-end gap-1">
+										{categoryName ? (
+											<Badge
+												variant="secondary"
+												className="bg-background/80 backdrop-blur-sm"
+											>
+												{categoryName}
+											</Badge>
+										) : (
+											<Badge variant="destructive" className="backdrop-blur-sm">
+												未分類
+											</Badge>
+										)}
+									</div>
 								</div>
 								<div className="flex items-start justify-between gap-2 p-3">
 									<div className="min-w-0">
@@ -438,6 +464,51 @@ function AdminPage() {
 												{new Date(file.created_at).toLocaleDateString()}
 											</span>
 										</div>
+										{creators.length > 0 && (
+											<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+												{creators.map((c) => (
+													<span
+														key={c.name}
+														className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+													>
+														<span>@{c.name}</span>
+														{c.url && (
+															<a
+																href={c.url}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="hover:text-foreground"
+																title="Website"
+															>
+																🔗
+															</a>
+														)}
+														{c.twitter && (
+															<a
+																href={`https://x.com/${c.twitter}`}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="hover:text-foreground"
+																title={`@${c.twitter}`}
+															>
+																𝕏
+															</a>
+														)}
+														{c.pixiv && (
+															<a
+																href={`https://www.pixiv.net/users/${c.pixiv}`}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="hover:text-foreground"
+																title="Pixiv"
+															>
+																P
+															</a>
+														)}
+													</span>
+												))}
+											</div>
+										)}
 									</div>
 									<Button
 										variant="ghost"
