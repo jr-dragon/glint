@@ -1,10 +1,13 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn, useServerFn } from "@tanstack/react-start";
 import {
+	CheckIcon,
 	FileIcon,
 	LoaderCircleIcon,
+	PencilIcon,
 	Trash2Icon,
 	UploadCloudIcon,
+	XIcon,
 } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { z } from "zod/v4";
@@ -29,6 +32,7 @@ import {
 	deleteFile,
 	listFiles,
 	removeTagFromFile,
+	renameFile,
 	uploadFile,
 } from "#/lib/storage";
 
@@ -48,6 +52,12 @@ const uploadFileFn = createServerFn({ method: "POST" })
 	.handler(async ({ data }) => {
 		const file = data.get("file") as File;
 		return uploadFile(file);
+	});
+
+const renameFileFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ id: z.string(), name: z.string().min(1) }))
+	.handler(async ({ data }) => {
+		await renameFile(data.id, data.name);
 	});
 
 const deleteFileFn = createServerFn({ method: "POST" })
@@ -112,6 +122,77 @@ function getTypeBadge(mime: string) {
 	if (mime.startsWith("video/")) return <Badge variant="secondary">影片</Badge>;
 	if (mime.startsWith("audio/")) return <Badge variant="secondary">音訊</Badge>;
 	return <Badge variant="outline">文件</Badge>;
+}
+
+function FileNameEditor({
+	name,
+	onRename,
+}: {
+	name: string;
+	onRename: (newName: string) => void;
+}) {
+	const [editing, setEditing] = useState(false);
+	const [draft, setDraft] = useState(name);
+	const inputRef = useRef<HTMLInputElement>(null);
+
+	function startEdit() {
+		setDraft(name);
+		setEditing(true);
+		requestAnimationFrame(() => inputRef.current?.select());
+	}
+
+	function commit() {
+		const trimmed = draft.trim();
+		if (trimmed && trimmed !== name) {
+			onRename(trimmed);
+		}
+		setEditing(false);
+	}
+
+	if (editing) {
+		return (
+			<div className="flex items-center gap-1">
+				<input
+					ref={inputRef}
+					className="min-w-0 flex-1 rounded border bg-background px-1.5 py-0.5 text-sm font-medium outline-none focus:ring-1 focus:ring-ring"
+					value={draft}
+					onChange={(e) => setDraft(e.target.value)}
+					onKeyDown={(e) => {
+						if (e.key === "Enter") commit();
+						if (e.key === "Escape") setEditing(false);
+					}}
+					onBlur={commit}
+				/>
+				<Button
+					variant="ghost"
+					size="icon-xs"
+					onMouseDown={(e) => e.preventDefault()}
+					onClick={commit}
+				>
+					<CheckIcon className="size-3.5" />
+				</Button>
+				<Button
+					variant="ghost"
+					size="icon-xs"
+					onMouseDown={(e) => e.preventDefault()}
+					onClick={() => setEditing(false)}
+				>
+					<XIcon className="size-3.5" />
+				</Button>
+			</div>
+		);
+	}
+
+	return (
+		<button
+			type="button"
+			className="group/name flex min-w-0 items-center gap-1 text-left"
+			onClick={startEdit}
+		>
+			<span className="truncate text-sm font-medium">{name}</span>
+			<PencilIcon className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/name:opacity-100" />
+		</button>
+	);
 }
 
 function TagEditor({
@@ -197,10 +278,24 @@ function AdminPage() {
 	const [deleteTarget, setDeleteTarget] = useState<FileRecord | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const uploadFn = useServerFn(uploadFileFn);
+	const renameFn = useServerFn(renameFileFn);
 	const deleteFn = useServerFn(deleteFileFn);
 
 	function handleTagsChange(fileId: string, tags: TagRecord[]) {
 		setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, tags } : f)));
+	}
+
+	async function handleRename(fileId: string, newName: string) {
+		const trimmed = newName.trim();
+		if (!trimmed) return;
+		setFiles((prev) =>
+			prev.map((f) =>
+				f.id === fileId
+					? { ...f, metadata: { ...f.metadata, originalName: trimmed } }
+					: f,
+			),
+		);
+		await renameFn({ data: { id: fileId, name: trimmed } });
 	}
 
 	async function handleFiles(fileList: FileList | null) {
@@ -330,9 +425,10 @@ function AdminPage() {
 								</div>
 								<div className="flex items-start justify-between gap-2 p-3">
 									<div className="min-w-0">
-										<p className="truncate text-sm font-medium">
-											{file.metadata.originalName}
-										</p>
+										<FileNameEditor
+											name={file.metadata.originalName}
+											onRename={(n) => handleRename(file.id, n)}
+										/>
 										<div className="mt-1.5 flex items-center gap-2">
 											{getTypeBadge(file.metadata.mime)}
 											<span className="text-xs text-muted-foreground">

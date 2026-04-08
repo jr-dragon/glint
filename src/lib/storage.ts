@@ -40,6 +40,17 @@ export async function uploadFile(file: File): Promise<UploadResult> {
 	};
 }
 
+export async function renameFile(id: string, newName: string): Promise<void> {
+	const db = createPrismaClient();
+	const record = await db.object.findUnique({ where: { id } });
+	if (!record) throw new Error("File not found");
+	const metadata = record.metadata as Record<string, unknown>;
+	await db.object.update({
+		where: { id },
+		data: { metadata: { ...metadata, originalName: newName } },
+	});
+}
+
 export async function deleteFile(id: string): Promise<void> {
 	const db = createPrismaClient();
 	const record = await db.object.findUnique({ where: { id } });
