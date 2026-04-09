@@ -36,11 +36,7 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-	return (
-		<>
-			<Outlet />
-		</>
-	);
+	return <Outlet />;
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {

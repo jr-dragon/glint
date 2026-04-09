@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { Heart, Library, Play, Plus, Search, Share2 } from "lucide-react";
+import { Heart, Library, Play, Plus, Share2 } from "lucide-react";
 import { z } from "zod/v4";
 import { listPublicCategoryObjects, type PublicObject } from "#/lib/storage";
 
@@ -57,21 +57,11 @@ function CategoryPage() {
 				>
 					Glint
 				</Link>
-				<div className="flex items-center gap-6">
-					<div className="hidden lg:flex items-center bg-surface-container-high rounded-full px-4 py-1.5 gap-2 border border-outline-variant/10">
-						<Search className="text-on-surface-variant w-4 h-4" />
-						<input
-							className="bg-transparent border-none focus:ring-0 text-sm w-48 placeholder-on-surface-variant/50 outline-none"
-							placeholder="Search archives..."
-							type="text"
-						/>
-					</div>
-				</div>
 			</nav>
 
 			<main className="pt-16">
 				{/* Category Hero Section */}
-				<header className="relative h-[520px] flex items-end px-12 pb-20 overflow-hidden">
+				<header className="relative h-130 flex items-end px-12 pb-20 overflow-hidden">
 					<div className="absolute inset-0 z-0">
 						{items[0]?.metadata.mime.startsWith("image/") ? (
 							<img
@@ -82,17 +72,9 @@ function CategoryPage() {
 						) : (
 							<div className="w-full h-full bg-surface-container-high" />
 						)}
-						<div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent" />
+						<div className="absolute inset-0 bg-linear-to-t from-surface via-surface/40 to-transparent" />
 					</div>
 					<div className="relative z-10 max-w-4xl">
-						<div className="flex items-center gap-2 mb-6">
-							<span className="px-3 py-1 rounded-full bg-primary text-on-primary-container text-[10px] tracking-widest uppercase font-bold">
-								Collection
-							</span>
-							<span className="text-on-surface-variant text-sm tracking-wide">
-								{total} {total === 1 ? "Item" : "Items"}
-							</span>
-						</div>
 						<h1 className="text-6xl md:text-8xl font-extrabold tracking-tighter text-on-surface mb-6 leading-tight">
 							{displayName}
 						</h1>
@@ -104,7 +86,7 @@ function CategoryPage() {
 					{items.length === 0 ? (
 						<div className="flex flex-col items-center justify-center py-24 text-on-surface-variant">
 							<Library className="w-12 h-12 mb-4 opacity-40" />
-							<p className="text-lg">No public items in this collection.</p>
+							<p className="text-lg">還沒有可公開的內容</p>
 						</div>
 					) : (
 						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12">
@@ -181,7 +163,7 @@ function MediaCard({ item }: { item: PublicObject }) {
 
 	return (
 		<div className="group cursor-pointer">
-			<div className="relative aspect-[4/5] rounded-2xl overflow-hidden mb-4 bg-surface-container-low transition-transform duration-500 group-hover:scale-[1.02] border border-outline-variant/10">
+			<div className="relative aspect-4/5 rounded-2xl overflow-hidden mb-4 bg-surface-container-low transition-transform duration-500 group-hover:scale-[1.02] border border-outline-variant/10">
 				{isImage && (
 					<img
 						alt={item.metadata.originalName}
@@ -200,7 +182,7 @@ function MediaCard({ item }: { item: PublicObject }) {
 						<Library className="w-10 h-10 text-on-surface-variant/40" />
 					</div>
 				)}
-				<div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent opacity-60" />
+				<div className="absolute inset-0 bg-linear-to-t from-surface-container-lowest to-transparent opacity-60" />
 
 				<div className="absolute top-4 right-4 bg-surface-container-lowest/40 backdrop-blur-md p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
 					<Heart className="w-5 h-5 text-white" />

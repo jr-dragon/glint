@@ -1,13 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Library,
-  Play,
-  Search,
-  Share2,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Library, Play, Share2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import {
@@ -51,22 +44,12 @@ function App() {
         <div className="text-2xl font-bold tracking-tighter text-primary">
           Glint
         </div>
-        <div className="flex items-center gap-6">
-          <div className="hidden lg:flex items-center bg-surface-container-high rounded-full px-4 py-1.5 gap-2 border border-outline-variant/10">
-            <Search className="text-on-surface-variant w-4 h-4" />
-            <input
-              className="bg-transparent border-none focus:ring-0 text-sm w-48 placeholder-on-surface-variant/50 outline-none"
-              placeholder="Explore masterpieces..."
-              type="text"
-            />
-          </div>
-        </div>
       </nav>
 
       <main className="pt-16">
         {/* Hero Featured Carousel Section */}
         {heroItem ? (
-          <section className="relative w-full h-[80vh] min-h-[600px] overflow-hidden group">
+          <section className="relative w-full h-[80vh] min-h-150 overflow-hidden group">
             <div className="absolute inset-0">
               {heroItem.metadata.mime.startsWith("image/") ? (
                 <img
@@ -90,8 +73,8 @@ function App() {
               ) : (
                 <div className="w-full h-full bg-surface-container" />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/20 to-transparent" />
-              <div className="absolute inset-0 bg-gradient-to-r from-surface via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-t from-surface via-surface/20 to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-r from-surface via-transparent to-transparent" />
             </div>
 
             {/* Carousel Content Overlay */}
@@ -102,7 +85,7 @@ function App() {
                     <span className="px-3 py-1 rounded-sm bg-secondary/20 text-secondary text-[10px] font-bold tracking-[0.2em] uppercase border border-secondary/30">
                       {heroItem.category}
                     </span>
-                    <span className="h-[1px] w-12 bg-outline-variant/30" />
+                    <span className="h-px w-12 bg-outline-variant/30" />
                   </>
                 )}
                 {heroItem.creator && (
@@ -118,14 +101,15 @@ function App() {
                 <div className="flex items-center gap-4">
                   <Button
                     asChild
-                    className="bg-gradient-to-r from-primary to-primary-container text-on-primary-container h-auto px-10 py-4 rounded-full font-bold flex items-center gap-3 hover:scale-105 transition-transform border-none"
+                    className="bg-linear-to-r from-primary to-primary-container text-on-primary-container h-auto px-10 py-4 rounded-full font-bold flex items-center gap-3 hover:scale-105 transition-transform border-none"
                   >
                     <Link
                       to="/category/$categoryName"
                       params={{ categoryName: heroItem.category }}
+                      search={{ page: 1 }}
                     >
                       <Library className="w-5 h-5" />
-                      VIEW COLLECTION
+                      檢視全部
                     </Link>
                   </Button>
                 </div>
@@ -171,13 +155,13 @@ function App() {
             )}
           </section>
         ) : (
-          <section className="relative w-full h-[40vh] min-h-[300px] flex items-center justify-center bg-surface-container">
+          <section className="relative w-full h-[40vh] min-h-75 flex items-center justify-center bg-surface-container">
             <div className="text-center">
               <h1 className="text-6xl font-extrabold tracking-tighter text-on-surface mb-4">
                 <span className="text-primary">Glint</span>
               </h1>
               <p className="text-on-surface-variant text-lg">
-                No public content yet.
+                這裡還什麼也沒有 uwu
               </p>
             </div>
           </section>
@@ -186,21 +170,6 @@ function App() {
         {/* Collections Grid */}
         {categories.length > 0 && (
           <section className="px-8 md:px-12 py-24 max-w-7xl mx-auto">
-            <header className="mb-12">
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div className="space-y-2">
-                  <h2 className="text-5xl font-extrabold tracking-tighter text-on-surface leading-tight uppercase">
-                    <span className="bg-gradient-to-r from-primary to-primary-container bg-clip-text text-transparent">
-                      Collections
-                    </span>
-                  </h2>
-                  <p className="text-on-surface-variant max-w-xl text-lg">
-                    Browse curated collections of public media.
-                  </p>
-                </div>
-              </div>
-            </header>
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {categories.map((category) => (
                 <CategoryCard key={category.id} category={category} />
@@ -238,7 +207,8 @@ function CategoryCard({ category }: { category: PublicCategoryWithCover }) {
     <Link
       to="/category/$categoryName"
       params={{ categoryName: category.name }}
-      className="group relative aspect-[4/5] rounded-xl overflow-hidden bg-surface-container transition-all duration-300 hover:scale-[1.02] hover:bg-surface-bright cursor-pointer shadow-lg shadow-black/20 border border-outline-variant/10 block"
+      search={{ page: 1 }}
+      className="group relative aspect-4/5 rounded-xl overflow-hidden bg-surface-container transition-all duration-300 hover:scale-[1.02] hover:bg-surface-bright cursor-pointer shadow-lg shadow-black/20 border border-outline-variant/10 block"
     >
       {category.cover?.metadata.mime.startsWith("image/") ? (
         <img
@@ -249,7 +219,7 @@ function CategoryCard({ category }: { category: PublicCategoryWithCover }) {
       ) : (
         <div className="absolute inset-0 w-full h-full bg-surface-container-high" />
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-transparent to-transparent opacity-90" />
+      <div className="absolute inset-0 bg-linear-to-t from-surface-container-lowest via-transparent to-transparent opacity-90" />
       <div className="absolute bottom-0 left-0 p-8 w-full">
         <h3 className="text-2xl font-bold text-on-surface mb-1">
           {category.name}
