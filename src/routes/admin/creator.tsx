@@ -60,8 +60,8 @@ import {
 	type CreatorRecord,
 	createCreator,
 	deleteCreator,
+	listAllCreatorObjects,
 	listCreators,
-	listFiles,
 	updateCreator,
 } from "#/lib/storage";
 
@@ -69,12 +69,12 @@ import {
 
 const listCreatorsFn = createServerFn({ method: "GET" })
 	.inputValidator(z.object({ page: z.number().int().min(1) }))
-	.handler(async ({ data }) => {
-		const [creators, { items, total }] = await Promise.all([
+	.handler(async ({ data: _data }) => {
+		const [creators, creatorObjects] = await Promise.all([
 			listCreators(),
-			listFiles(data.page),
+			listAllCreatorObjects(),
 		]);
-		return { creators, objects: items, total };
+		return { creators, creatorObjects };
 	});
 
 const createCreatorFn = createServerFn({ method: "POST" })
@@ -177,7 +177,7 @@ function CreatorPage() {
 	const updateCrt = useServerFn(updateCreatorFn);
 	const deleteCrt = useServerFn(deleteCreatorFn);
 
-	const { creators, objects } = loaderData;
+	const { creators, creatorObjects } = loaderData;
 
 	function buildMetadata(): Record<string, string> | null {
 		const meta: Record<string, string> = {};
@@ -235,24 +235,6 @@ function CreatorPage() {
 		}
 	}
 
-	// Build per-creator bound objects from the loaded objects
-	const creatorBoundObjects: Record<string, CategoryObject[]> = {};
-	for (const creator of creators) {
-		creatorBoundObjects[creator.id] = [];
-	}
-	for (const obj of objects) {
-		const tags = (obj as { tags?: { name: string; id: string }[] }).tags ?? [];
-		for (const tag of tags) {
-			if (creatorBoundObjects[tag.id]) {
-				creatorBoundObjects[tag.id].push({
-					id: obj.id,
-					path: obj.path,
-					metadata: obj.metadata as CategoryObject["metadata"],
-				});
-			}
-		}
-	}
-
 	return (
 		<>
 			<div className="mb-6 flex items-center justify-between">
@@ -278,7 +260,7 @@ function CreatorPage() {
 			) : (
 				<Accordion type="single" collapsible className="rounded-xl border px-4">
 					{creators.map((creator) => {
-						const bound = creatorBoundObjects[creator.id] ?? [];
+						const bound = creatorObjects[creator.id] ?? [];
 						const meta = (creator.metadata ?? {}) as MetadataFields;
 						return (
 							<AccordionItem key={creator.id} value={creator.id}>

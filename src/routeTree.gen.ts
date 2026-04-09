@@ -9,18 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as CategoryCategoryNameRouteImport } from './routes/category.$categoryName'
 import { Route as AdminCreatorRouteImport } from './routes/admin/creator'
 import { Route as AdminCategoryRouteImport } from './routes/admin/category'
 
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminRouteRoute = AdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -36,6 +31,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const CategoryCategoryNameRoute = CategoryCategoryNameRouteImport.update({
+  id: '/category/$categoryName',
+  path: '/category/$categoryName',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminCreatorRoute = AdminCreatorRouteImport.update({
   id: '/creator',
   path: '/creator',
@@ -50,25 +50,25 @@ const AdminCategoryRoute = AdminCategoryRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
-  '/about': typeof AboutRoute
   '/admin/category': typeof AdminCategoryRoute
   '/admin/creator': typeof AdminCreatorRoute
+  '/category/$categoryName': typeof CategoryCategoryNameRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/admin/category': typeof AdminCategoryRoute
   '/admin/creator': typeof AdminCreatorRoute
+  '/category/$categoryName': typeof CategoryCategoryNameRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
-  '/about': typeof AboutRoute
   '/admin/category': typeof AdminCategoryRoute
   '/admin/creator': typeof AdminCreatorRoute
+  '/category/$categoryName': typeof CategoryCategoryNameRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -76,37 +76,35 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
-    | '/about'
     | '/admin/category'
     | '/admin/creator'
+    | '/category/$categoryName'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/admin/category' | '/admin/creator' | '/admin'
+  to:
+    | '/'
+    | '/admin/category'
+    | '/admin/creator'
+    | '/category/$categoryName'
+    | '/admin'
   id:
     | '__root__'
     | '/'
     | '/admin'
-    | '/about'
     | '/admin/category'
     | '/admin/creator'
+    | '/category/$categoryName'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
-  AboutRoute: typeof AboutRoute
+  CategoryCategoryNameRoute: typeof CategoryCategoryNameRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -127,6 +125,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
+    }
+    '/category/$categoryName': {
+      id: '/category/$categoryName'
+      path: '/category/$categoryName'
+      fullPath: '/category/$categoryName'
+      preLoaderRoute: typeof CategoryCategoryNameRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/creator': {
       id: '/admin/creator'
@@ -164,7 +169,7 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
-  AboutRoute: AboutRoute,
+  CategoryCategoryNameRoute: CategoryCategoryNameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

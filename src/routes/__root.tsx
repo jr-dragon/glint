@@ -4,17 +4,20 @@ import {
 	HeadContent,
 	Outlet,
 	Scripts,
-	useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import Footer from "../components/Footer";
-import Header from "../components/Header";
+import { createServerFn } from "@tanstack/react-start";
+import { getAppName } from "#/lib/app-name";
 import { Toaster } from "../components/ui/sonner";
 
 import appCss from "../styles.css?url";
 
+const loadRootFn = createServerFn({ method: "GET" }).handler(async () => {
+	return { appName: getAppName() };
+});
+
 export const Route = createRootRoute({
-	head: () => ({
+	head: ({ loaderData }) => ({
 		meta: [
 			{
 				charSet: "utf-8",
@@ -24,7 +27,7 @@ export const Route = createRootRoute({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "Glint",
+				title: loaderData?.appName ?? "Glint",
 			},
 		],
 		links: [
@@ -34,21 +37,13 @@ export const Route = createRootRoute({
 			},
 		],
 	}),
+	loader: () => loadRootFn(),
 	component: RootComponent,
 	shellComponent: RootDocument,
 });
 
 function RootComponent() {
-	const pathname = useRouterState({ select: (s) => s.location.pathname });
-	const isAdmin = pathname.startsWith("/admin");
-
-	return (
-		<>
-			{!isAdmin && <Header />}
-			<Outlet />
-			{!isAdmin && <Footer />}
-		</>
-	);
+	return <Outlet />;
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
