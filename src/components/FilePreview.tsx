@@ -1,20 +1,29 @@
 import { FileIcon, Music2Icon } from "lucide-react";
+import { OptimizedImage } from "#/components/OptimizedImage";
 
 interface FilePreviewProps {
 	path: string;
 	mime: string;
 	alt?: string;
+	optimize?: boolean;
 }
 
 function getPreviewUrl(path: string) {
 	return `/api/files/${path}`;
 }
 
-export function FilePreview({ path, mime, alt }: FilePreviewProps) {
+export function FilePreview({ path, mime, alt, optimize }: FilePreviewProps) {
 	const url = getPreviewUrl(path);
 
 	if (mime.startsWith("image/")) {
-		return (
+		return optimize ? (
+			<OptimizedImage
+				src={url}
+				alt={alt ?? path}
+				className="h-full w-full bg-muted object-contain"
+				cfOptions={{ width: 800, quality: 80 }}
+			/>
+		) : (
 			<img
 				src={url}
 				alt={alt ?? path}
