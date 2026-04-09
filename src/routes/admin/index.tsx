@@ -4,6 +4,7 @@ import {
 	CheckIcon,
 	EarthIcon,
 	EarthLockIcon,
+	ExpandIcon,
 	FileIcon,
 	LoaderCircleIcon,
 	PencilIcon,
@@ -52,6 +53,7 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
+	DialogTrigger,
 } from "#/components/ui/dialog";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
@@ -1254,9 +1256,38 @@ function AdminPage() {
 									path={file.path}
 									mime={file.metadata.mime}
 									alt={file.metadata.originalName}
+									optimize
 								/>
-								<div className="absolute left-2 top-2">
+								<div className="absolute left-2 top-2 flex items-center gap-1">
 									<PublicToggle file={file} onTagsChange={handleTagsChange} />
+									{file.metadata.mime.startsWith("image/") && (
+										<Dialog>
+											<Button
+												variant="ghost"
+												size="icon-xs"
+												className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
+												title="瀏覽全圖"
+												asChild
+											>
+												<DialogTrigger>
+													<ExpandIcon className="size-3.5" />
+												</DialogTrigger>
+											</Button>
+											<DialogContent className="max-w-4xl">
+												<DialogHeader>
+													<DialogTitle>
+														{file.metadata.originalName}
+													</DialogTitle>
+													<DialogDescription>原始圖片預覽</DialogDescription>
+												</DialogHeader>
+												<img
+													src={`/api/files/${file.path}`}
+													alt={file.metadata.originalName}
+													className="w-full object-contain"
+												/>
+											</DialogContent>
+										</Dialog>
+									)}
 								</div>
 								<div className="absolute right-2 top-2 flex flex-col items-end gap-1">
 									<CategoryEditor
