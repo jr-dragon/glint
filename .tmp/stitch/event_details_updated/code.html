@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "on-secondary-fixed": "#41009a",
+                  "secondary-container": "#7000ff",
+                  "surface-bright": "#292c32",
+                  "tertiary": "#65afff",
+                  "primary-fixed-dim": "#00deec",
+                  "on-background": "#f6f6fc",
+                  "surface": "#0c0e12",
+                  "surface-variant": "#23262c",
+                  "primary-dim": "#00deec",
+                  "inverse-on-surface": "#53555a",
+                  "secondary-dim": "#874cff",
+                  "error": "#ff716c",
+                  "on-primary-container": "#005359",
+                  "on-secondary": "#290067",
+                  "on-primary-fixed": "#003f43",
+                  "error-dim": "#d7383b",
+                  "on-tertiary": "#002e52",
+                  "on-primary": "#005d63",
+                  "surface-container-highest": "#23262c",
+                  "background": "#0c0e12",
+                  "on-surface": "#f6f6fc",
+                  "on-surface-variant": "#aaabb0",
+                  "primary": "#8ff5ff",
+                  "on-error": "#490006",
+                  "on-tertiary-container": "#00213e",
+                  "inverse-surface": "#f9f9ff",
+                  "secondary": "#ac89ff",
+                  "outline": "#74757a",
+                  "on-tertiary-fixed": "#001930",
+                  "error-container": "#9f0519",
+                  "inverse-primary": "#006a71",
+                  "tertiary-dim": "#4aa2f9",
+                  "surface-dim": "#0c0e12",
+                  "surface-container-low": "#111318",
+                  "surface-container-high": "#1d2025",
+                  "secondary-fixed-dim": "#ceb9ff",
+                  "on-primary-fixed-variant": "#005e64",
+                  "on-secondary-container": "#f8f1ff",
+                  "primary-container": "#00eefc",
+                  "surface-container": "#171a1f",
+                  "on-secondary-fixed-variant": "#6300e2",
+                  "primary-fixed": "#00eefc",
+                  "tertiary-fixed-dim": "#51a7fe",
+                  "secondary-fixed": "#dac9ff",
+                  "on-error-container": "#ffa8a3",
+                  "tertiary-container": "#4aa2f9",
+                  "outline-variant": "#46484d",
+                  "tertiary-fixed": "#72b5ff",
+                  "on-tertiary-fixed-variant": "#003b68",
+                  "surface-tint": "#8ff5ff",
+                  "surface-container-lowest": "#000000"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.25rem",
+                  "lg": "0.5rem",
+                  "xl": "0.75rem",
+                  "2xl": "1.5rem",
+                  "full": "9999px"
+          },
+          "fontFamily": {
+                  "headline": ["Manrope"],
+                  "body": ["Inter"],
+                  "label": ["Inter"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .glass-nav {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(24px);
+    }
+    .text-shadow-hero {
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary selection:text-on-primary-container">
+<!-- Shared Component: TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-surface/60 backdrop-blur-xl dark:bg-[#0c0e12]/60 shadow-[0_20px_40px_rgba(0,0,0,0.4)] flex justify-between items-center px-8 py-4 w-full font-['Manrope'] tracking-tight">
+<div class="text-2xl font-bold tracking-tighter text-[#8ff5ff] dark:text-[#00f0ff]">CINEMATIC LENS</div>
+<div class="hidden md:flex items-center space-x-8">
+<a class="text-[#8ff5ff] dark:text-[#00f0ff] border-b-2 border-[#8ff5ff] pb-1" href="#">Collections</a>
+<a class="text-[#aaabb0] hover:text-[#8ff5ff] transition-colors duration-200" href="#">My Library</a>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden lg:flex items-center bg-slate-800/50 rounded-full px-4 py-1.5 border border-outline-variant/10">
+<span class="material-symbols-outlined text-slate-400 text-sm mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm text-on-surface w-40" placeholder="Search archives..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-slate-400 hover:text-[#8ff5ff] transition-colors duration-200 p-2 rounded-full scale-95 active:scale-90">notifications</button>
+<button class="material-symbols-outlined text-slate-400 hover:text-[#8ff5ff] transition-colors duration-200 p-2 rounded-full scale-95 active:scale-90">settings</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-[#8ff5ff]/30">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="close-up portrait of a professional woman with a creative aesthetic, soft cinematic lighting with cool tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBV92x5GJx8V8xDzVo1lJNljj2AvFa7MBSxZ67VRmTCSUwTEqMRzR8UkJgjAkun-Q1obROEbmtSVoCCrN2tI3oiX6DYbct4zKULr4jnv4DC6fomBcMqUoQxufCuSH9RNBRXoWz30pJmg8D2FNU0eu5xLvieGfumsW--_Bk_m6HjaWToM9r_WYqycsS_vnEAKfnJEVjCT1LMZA4IicdICTHSY03Zw-zbwJzwVpMVoa9usnjmlQnF5UwH6XbWWKmhJofk_9Py56iAb_c"/>
+</div>
+</div>
+</div>
+</nav>
+<main class="pt-20">
+<!-- Category Hero Section -->
+<header class="relative h-[520px] flex items-end px-12 pb-20 overflow-hidden">
+<div class="absolute inset-0 z-0">
+<img alt="Event background" class="w-full h-full object-cover opacity-60" data-alt="cinematic wide shot of a glamorous birthday party in a luxury loft, warm string lights, guests in evening wear, atmospheric bokeh and celebratory mood" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAg_f4f7NUOphqw8hDGbldanmsVIIcR-vijhwACtFtZQGXNg9r0eBLoS1oSznzUJCTUNn8f2ZWm9m0FbvFjEIzXUkwLEflnVh9ec4O9b6-iryDuWR-QjK4YFWwts9abfd18h75psiAg1hf9maLTtLCZF7jc0GyX4Ci1Iuf86s4hlsYlYhAde-4j7s9o5zuSMUS1TmlKDM99npC6xreGcYWYZlvfIYmka1gYCin7VY8uP_FTc8bYV_S-Dk3rRQHv28Wd3mjf5fCBhfY"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent"></div>
+</div>
+<div class="relative z-10 max-w-4xl">
+<div class="flex items-center gap-2 mb-6">
+<span class="px-3 py-1 rounded-full bg-primary text-on-primary-container font-label text-[10px] tracking-widest uppercase font-bold">Event Collection</span>
+<span class="text-on-surface-variant text-sm font-label tracking-wide">June 15, 2024 • 342 Artifacts</span>
+</div>
+<h1 class="text-6xl md:text-8xl font-headline font-extrabold tracking-tighter text-on-surface mb-6 leading-tight">30th Birthday Party</h1>
+<p class="text-on-surface-variant text-xl max-w-2xl leading-relaxed">
+          Celebrating three decades of brilliance. A curated archive of candid moments, grand toasts, and the electric atmosphere of Sarah's milestone evening at The Skyloft.
+        </p>
+</div>
+</header>
+<!-- Filter Bar -->
+<section class="px-12 py-8 flex flex-wrap items-center justify-between gap-6 border-b border-outline-variant/10 sticky top-20 bg-surface/80 backdrop-blur-md z-40">
+<div class="flex items-center gap-3">
+<button class="bg-primary text-on-primary-container px-6 py-2 rounded-full text-sm font-semibold flex items-center gap-2 transition-all hover:opacity-90">
+<span class="material-symbols-outlined text-lg">filter_list</span>
+          All Moments
+        </button>
+<button class="bg-surface-container-high text-on-surface px-6 py-2 rounded-full text-sm font-medium hover:bg-surface-container-highest transition-all">Speeches</button>
+<button class="bg-surface-container-high text-on-surface px-6 py-2 rounded-full text-sm font-medium hover:bg-surface-container-highest transition-all">Dancing</button>
+<button class="bg-surface-container-high text-on-surface px-6 py-2 rounded-full text-sm font-medium hover:bg-surface-container-highest transition-all">Candids</button>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-on-surface-variant text-sm font-label">Sort by</span>
+<div class="relative group">
+<button class="bg-surface-container-low border border-outline-variant/20 px-4 py-2 rounded-lg text-sm flex items-center gap-8 min-w-[160px] justify-between">
+            Timeline
+            <span class="material-symbols-outlined text-primary">expand_more</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Media Grid -->
+<section class="px-12 py-12">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12">
+<!-- Media Card 1 -->
+<div class="group cursor-pointer">
+<div class="relative aspect-[4/5] rounded-2xl overflow-hidden mb-4 bg-surface-container-low transition-transform duration-500 group-hover:scale-[1.02]">
+<img alt="The Grand Entrance" class="w-full h-full object-cover" data-alt="candid shot of a woman in a sparkling gold dress entering a room with cheers, confetti in the air, warm cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoYDtzBIFNX3vjNDnIOFGguRX6U9epIn6flUnu0Lw0AYzuzewLAD8Hq4Ux8EAGs8ZJwtn4SygxycLTWAlFWtCpcMLUWzxQtV7-Tif635e74sSkx-XKw82wMseB-SwnQwAhS6eTSU3q1erPMRLoce2-wCLlJ3VI1IoxZa_kOnib9arU_PCueIqYRDtj_XRn9xV0gLmOfSqm8QT35zHnJXU6zezt55sdL91aUWl0F4ROdFH0b3jzauvcSump-VhzXC3g9CxN1r1MWr0"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent opacity-60"></div>
+<div class="absolute top-4 right-4 bg-surface-container-lowest/40 backdrop-blur-md p-2 rounded-full">
+<span class="material-symbols-outlined text-white text-xl">favorite</span>
+</div>
+<div class="absolute bottom-4 left-4 flex items-center gap-2"><span class="bg-primary/20 backdrop-blur-md text-primary text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Portrait</span></div>
+</div>
+<div>
+<h3 class="text-on-surface font-headline font-bold text-lg leading-tight group-hover:text-primary transition-colors">The Grand Entrance</h3>
+<div class="flex items-center gap-3 mt-2 text-on-surface-variant text-xs font-label tracking-wide"><span>@alex_walker</span></div>
+</div>
+</div>
+<!-- Media Card 2 -->
+<div class="group cursor-pointer">
+<div class="relative aspect-[4/5] rounded-2xl overflow-hidden mb-4 bg-surface-container-low transition-transform duration-500 group-hover:scale-[1.02]">
+<img alt="Toast to Sarah" class="w-full h-full object-cover" data-alt="close up of champagne glasses clinking in a toast, blurry party guests in background, golden reflections" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_Bv346-kMzDIteK1xrghZn4YDf_pvhwHr2L00zTu2j6kishDFTqIL7H8BlntVZ480LbTMAlsL98tdyJBOj_1Pc4bKFVZocFkEN_R0tYKlB8jQCzWreVa5S-xOpV_lw2BxTqD2WqDTSfQLwzJC6tt3sW90PT-VaPGz4NL1JN9-KQjXVLHm_2z6aoF0G--MWOVl-jRSDeS1VoIz3nezsZVAXaddX3T1xJ0JALpvS3AuWeiOVXbDUp0ndU_H8Ot8SmJWYf14kbc_jv8"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent opacity-60"></div>
+<div class="absolute bottom-4 left-4 flex items-center gap-2"><span class="bg-secondary/20 backdrop-blur-md text-secondary text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Candid</span></div>
+</div>
+<div>
+<h3 class="text-on-surface font-headline font-bold text-lg leading-tight group-hover:text-primary transition-colors">Toast to Sarah</h3>
+<div class="flex items-center gap-3 mt-2 text-on-surface-variant text-xs font-label tracking-wide"><span>@sarah_j</span></div>
+</div>
+</div>
+<!-- Media Card 3 (Featured/Wide) -->
+<div class="group cursor-pointer md:col-span-2">
+<div class="relative aspect-[16/9] rounded-2xl overflow-hidden mb-4 bg-surface-container-low transition-transform duration-500 group-hover:scale-[1.01]">
+<img alt="Midnight Celebration" class="w-full h-full object-cover" data-alt="wide shot of a crowded dance floor at night, professional lighting effects, energy and movement captured with slight motion blur" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAMxx81VSsthGP7vKFO8BAf_nRX2NgBHiQWvtXD_ZrCIUwLHFJz5BH-1F8qZe7Lzm4_vdywO8NBeAGUez_fH2ZeojT0qPCD_qqmtJE31_puzCSLreZ5kPMSxvqRLj8dCDQkoCOUe_DANY5UjpSkGUALP_bpjDwM6KZZYqgI6VRfCl1RsXQS0iWbbCx9ywK5k1Ism_lZaG24r0qY2D_JwOSU4nqhJizJhUcZ6xP2g8S8K4dysKaw5XaoJFy2Vvshc6cRejpA5eA_usE"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/80 via-transparent to-transparent"></div>
+<div class="absolute bottom-6 left-6 right-6 flex items-end justify-between">
+<div>
+<span class="text-primary text-xs font-bold tracking-[0.2em] uppercase mb-1 block">Highlight Gallery</span>
+<h3 class="text-on-surface font-headline font-bold text-2xl leading-tight">The Midnight Celebration</h3>
+</div>
+<div class="flex items-center gap-2 bg-white/10 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10">
+<span class="material-symbols-outlined text-white">play_arrow</span>
+<span class="text-white text-sm font-bold">WATCH MONTAGE</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3 mt-2 text-on-surface-variant text-xs font-label tracking-wide"><span>@marcus_v</span></div>
+</div>
+<!-- Media Card 4 -->
+<div class="group cursor-pointer">
+<div class="relative aspect-[4/5] rounded-2xl overflow-hidden mb-4 bg-surface-container-low transition-transform duration-500 group-hover:scale-[1.02]">
+<img alt="City Lights" class="w-full h-full object-cover" data-alt="night city skyline view from a high balcony, sharp details, blue and amber lights, cinematic urban atmosphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAc1QVQSgTFdp1M956lY9Wvga0RHNhHgcj8FRoC-MAcbp2dkBcePZnqzmDaAx6-uHOlriayFM6BfLY8_iiKDONU_B4qb9yu8eGIdclFGtrdC7djniswDriD-9nj1A-9xjBWkKkILokoXg9RGkbbILgd75ARCbTwox7BIiOmO32palaiIb429_lwwm6akRfJ7lj9uA3vDqut2ABJ2rdF7S2FMPOtvKI3VXOm98LOckfifjQW5VptrcbKhIEkDuxM6DWc8drW0OhC4Us"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent opacity-60"></div>
+<div class="absolute bottom-4 left-4 flex items-center gap-2"><span class="bg-primary/20 backdrop-blur-md text-primary text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Cityscape</span></div>
+</div>
+<div>
+<h3 class="text-on-surface font-headline font-bold text-lg leading-tight group-hover:text-primary transition-colors">The Skyloft View</h3>
+<div class="flex items-center gap-3 mt-2 text-on-surface-variant text-xs font-label tracking-wide"><span>@elena_m</span></div>
+</div>
+</div>
+<!-- Media Card 5 -->
+<div class="group cursor-pointer">
+<div class="relative aspect-[4/5] rounded-2xl overflow-hidden mb-4 bg-surface-container-low transition-transform duration-500 group-hover:scale-[1.02]">
+<img alt="The Cake" class="w-full h-full object-cover" data-alt="stunning minimalist three-tier birthday cake with gold leaf and candles, sophisticated party decor" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdi69Dj_0BgdPfBqEgQRe9ohF_cW7f9hcdmyqq8AUV95J46QD5ZsJkTb5OA7Fb-HFKxGIWysjCOiSJePbelpntrfSWc5B9ceGVpB2hHiW-JDC8pF8PtwWpG0iuxwN47WeXlzxw-uvtwGlnu6n4hKRHNuyLn13T78EFzezcCPGylmWHsAc4-iqlJFkIPUORR_KOhzAJmgTWKaC_iFOeIagGLp1FUHHz2CN6eTHfE3byGZFfJz5nOARi5nHtfSmo-7ItTCNEXudLIzg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent opacity-60"></div>
+<div class="absolute bottom-4 left-4 flex items-center gap-2"><span class="bg-tertiary/20 backdrop-blur-md text-tertiary text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Still Life</span></div></div>
+<div>
+<h3 class="text-on-surface font-headline font-bold text-lg leading-tight group-hover:text-primary transition-colors">Gilded Confections</h3>
+<div class="flex items-center gap-3 mt-2 text-on-surface-variant text-xs font-label tracking-wide"><span>@david_k</span></div>
+</div>
+</div>
+<!-- Media Card 6 -->
+<div class="group cursor-pointer">
+<div class="relative aspect-[4/5] rounded-2xl overflow-hidden mb-4 bg-surface-container-low transition-transform duration-500 group-hover:scale-[1.02]">
+<img alt="Dancing Crowd" class="w-full h-full object-cover" data-alt="close up of hands up in the air at a party, silhouettes against bright stage lights, joy and movement" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAba6Hv8jLc_Ae_iWENnDuHGShKCm_IZ_--SwBPrRYa4jb6542zrm-R84tMEUJyElvxF_vVwbusyboQjrliDxoVwV4BIcdUnqNuFi5wAQ_R66otnbXptFQwBt8Wt_bPk4HHh_kkcS5hUBOZl0plfJwF3lZ8rUYWFjoigt61EAQ29HoSzuKlMGG4zROA-t5K1_E_HlSkIb7CCF9Mxv8DIS-_hwy5dTkdecDpI3t0zaclSfnMqKEzYDT96iFXNTLRmzzf3PD2oHB8ntc"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent opacity-60"></div>
+<div class="absolute bottom-4 left-4 flex items-center gap-2"><span class="bg-tertiary/20 backdrop-blur-md text-tertiary text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Action</span></div>
+</div>
+<div>
+<h3 class="text-on-surface font-headline font-bold text-lg leading-tight group-hover:text-primary transition-colors">Rhythm of the Night</h3>
+<div class="flex items-center gap-3 mt-2 text-on-surface-variant text-xs font-label tracking-wide"><span>@jess_w</span></div>
+</div>
+</div>
+</div>
+<!-- Pagination / Load More -->
+<div class="mt-20 flex justify-center">
+<button class="group flex flex-col items-center gap-4">
+<div class="w-12 h-12 rounded-full border border-outline-variant/30 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/50 transition-all">
+<span class="material-symbols-outlined text-primary">add</span>
+</div>
+<span class="text-on-surface-variant text-sm font-label tracking-widest uppercase">Load More Moments</span>
+</button>
+</div>
+</section>
+</main>
+<!-- Shared Component: Footer -->
+<footer class="bg-[#0c0e12] dark:bg-[#0c0e12] w-full py-12 border-t border-[#46484d]/15">
+<div class="flex flex-col md:flex-row justify-between items-center px-8 max-w-7xl mx-auto gap-6">
+<div class="font-['Inter'] text-sm text-[#aaabb0]">© 2024 Cinematic Lens. All rights reserved.</div>
+<div class="flex gap-8">
+<a class="font-['Inter'] text-sm text-[#aaabb0] hover:text-white transition-colors opacity-80 hover:opacity-100" href="#">Privacy</a>
+<a class="font-['Inter'] text-sm text-[#aaabb0] hover:text-white transition-colors opacity-80 hover:opacity-100" href="#">Terms</a>
+<a class="font-['Inter'] text-sm text-[#aaabb0] hover:text-white transition-colors opacity-80 hover:opacity-100" href="#">Support</a>
+</div>
+</div>
+</footer>
+</body></html>

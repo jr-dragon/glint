@@ -393,3 +393,176 @@ export async function unsetObjectPublic(objectId: string): Promise<void> {
 		data: { tags: { disconnect: { name: PUBLIC_TAG } } },
 	});
 }
+
+// --- Public page queries ---
+
+export interface PublicCategoryWithCover {
+	id: string;
+	name: string;
+	objectCount: number;
+	cover: {
+		path: string;
+		metadata: { mime: string; originalName: string };
+	} | null;
+}
+
+/** List categories that contain at least one public object, with a cover image. */
+export async function listPublicCategories(): Promise<
+	PublicCategoryWithCover[]
+> {
+	const db = createPrismaClient();
+	const tags = await db.tag.findMany({
+		where: { name: { startsWith: CATEGORY_PREFIX } },
+		include: {
+			objects: {
+				where: {
+					deleted_at: null,
+					tags: { some: { name: PUBLIC_TAG } },
+				},
+				orderBy: { created_at: "desc" },
+				select: {
+					id: true,
+					path: true,
+					metadata: true,
+				},
+			},
+		},
+		orderBy: { created_at: "asc" },
+	});
+
+	return tags
+		.filter((tag) => tag.objects.length > 0)
+		.map((tag) => {
+			const first = tag.objects[0];
+			const meta = first?.metadata as Record<string, unknown> | undefined;
+			return {
+				id: tag.id,
+				name: tag.name.slice(CATEGORY_PREFIX.length),
+				objectCount: tag.objects.length,
+				cover: first
+					? {
+							path: first.path,
+							metadata: {
+								mime: (meta?.mime as string) ?? "application/octet-stream",
+								originalName: (meta?.originalName as string) ?? "",
+							},
+						}
+					: null,
+			};
+		});
+}
+
+export interface PublicObject {
+	id: string;
+	path: string;
+	metadata: { mime: string; size: number; originalName: string };
+	creator: { name: string; metadata: Record<string, string> | null } | null;
+}
+
+/** List public objects within a category, identified by category name. */
+export async function listPublicCategoryObjects(
+	categoryName: string,
+	page = 1,
+	perPage = 24,
+): Promise<{
+	items: PublicObject[];
+	total: number;
+	categoryId: string | null;
+}> {
+	const db = createPrismaClient();
+	const tagName = `${CATEGORY_PREFIX}${categoryName}`;
+	const tag = await db.tag.findUnique({ where: { name: tagName } });
+	if (!tag) return { items: [], total: 0, categoryId: null };
+
+	const where = {
+		deleted_at: null,
+		tags: {
+			some: { name: PUBLIC_TAG },
+		},
+		AND: {
+			tags: { some: { id: tag.id } },
+		},
+	};
+
+	const [rows, total] = await Promise.all([
+		db.object.findMany({
+			where,
+			include: {
+				tags: {
+					where: { name: { startsWith: CREATOR_PREFIX } },
+					select: { name: true, metadata: true },
+				},
+			},
+			orderBy: { created_at: "desc" },
+			skip: (page - 1) * perPage,
+			take: perPage,
+		}),
+		db.object.count({ where }),
+	]);
+
+	return {
+		items: rows.map((r) => {
+			const creatorTag = r.tags[0];
+			return {
+				id: r.id,
+				path: r.path,
+				metadata: r.metadata as PublicObject["metadata"],
+				creator: creatorTag
+					? {
+							name: creatorTag.name.slice(CREATOR_PREFIX.length),
+							metadata:
+								(creatorTag.metadata as Record<string, string> | null) ?? null,
+						}
+					: null,
+			};
+		}),
+		total,
+		categoryId: tag.id,
+	};
+}
+
+/** List the latest public objects across all categories (for hero/featured). */
+export async function listFeaturedPublicObjects(
+	limit = 5,
+): Promise<(PublicObject & { category: string | null })[]> {
+	const db = createPrismaClient();
+	const rows = await db.object.findMany({
+		where: {
+			deleted_at: null,
+			tags: { some: { name: PUBLIC_TAG } },
+		},
+		include: {
+			tags: {
+				where: {
+					OR: [
+						{ name: { startsWith: CATEGORY_PREFIX } },
+						{ name: { startsWith: CREATOR_PREFIX } },
+					],
+				},
+				select: { name: true, metadata: true },
+			},
+		},
+		orderBy: { created_at: "desc" },
+		take: limit,
+	});
+
+	return rows.map((r) => {
+		const categoryTag = r.tags.find((t) => t.name.startsWith(CATEGORY_PREFIX));
+		const creatorTag = r.tags.find((t) => t.name.startsWith(CREATOR_PREFIX));
+		return {
+			id: r.id,
+			path: r.path,
+			metadata: r.metadata as PublicObject["metadata"],
+			category: categoryTag
+				? categoryTag.name.slice(CATEGORY_PREFIX.length)
+				: null,
+			creator: creatorTag
+				? {
+						name: creatorTag.name.slice(CREATOR_PREFIX.length),
+						metadata:
+							(creatorTag.metadata as Record<string, string> | null) ?? null,
+					}
+				: null,
+		};
+	});
+}
