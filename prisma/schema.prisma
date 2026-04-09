@@ -28,6 +28,7 @@ model Object {
 model Tag {
   id         String    @id @default(uuid())
   name       String    @unique
+  metadata   Json?
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
   objects    Object[]  @relation("object_tags")

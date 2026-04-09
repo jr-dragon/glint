@@ -13,6 +13,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminCreatorRouteImport } from './routes/admin/creator'
 import { Route as AdminCategoryRouteImport } from './routes/admin/category'
 
 const AboutRoute = AboutRouteImport.update({
@@ -35,6 +36,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminCreatorRoute = AdminCreatorRouteImport.update({
+  id: '/creator',
+  path: '/creator',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminCategoryRoute = AdminCategoryRouteImport.update({
   id: '/category',
   path: '/category',
@@ -46,12 +52,14 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/admin/category': typeof AdminCategoryRoute
+  '/admin/creator': typeof AdminCreatorRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin/category': typeof AdminCategoryRoute
+  '/admin/creator': typeof AdminCreatorRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
@@ -60,14 +68,28 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/admin/category': typeof AdminCategoryRoute
+  '/admin/creator': typeof AdminCreatorRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/about' | '/admin/category' | '/admin/'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/about'
+    | '/admin/category'
+    | '/admin/creator'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/admin/category' | '/admin'
-  id: '__root__' | '/' | '/admin' | '/about' | '/admin/category' | '/admin/'
+  to: '/' | '/about' | '/admin/category' | '/admin/creator' | '/admin'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/about'
+    | '/admin/category'
+    | '/admin/creator'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,6 +128,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/creator': {
+      id: '/admin/creator'
+      path: '/creator'
+      fullPath: '/admin/creator'
+      preLoaderRoute: typeof AdminCreatorRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/category': {
       id: '/admin/category'
       path: '/category'
@@ -118,11 +147,13 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteRouteChildren {
   AdminCategoryRoute: typeof AdminCategoryRoute
+  AdminCreatorRoute: typeof AdminCreatorRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminCategoryRoute: AdminCategoryRoute,
+  AdminCreatorRoute: AdminCreatorRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
