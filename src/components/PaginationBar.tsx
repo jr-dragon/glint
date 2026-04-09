@@ -49,7 +49,7 @@ export function PaginationBar({ page, totalPages }: PaginationBarProps) {
 						className={page <= 1 ? "pointer-events-none opacity-50" : ""}
 					>
 						{page > 1 ? (
-							<Link to="." search={{ page: page - 1 }}>
+							<Link to="." search={(prev) => ({ ...prev, page: page - 1 })}>
 								{null}
 							</Link>
 						) : (
@@ -65,7 +65,7 @@ export function PaginationBar({ page, totalPages }: PaginationBarProps) {
 					) : (
 						<PaginationItem key={p}>
 							<PaginationLink asChild isActive={p === page}>
-								<Link to="." search={{ page: p }}>
+								<Link to="." search={(prev) => ({ ...prev, page: p })}>
 									{p}
 								</Link>
 							</PaginationLink>
@@ -81,7 +81,7 @@ export function PaginationBar({ page, totalPages }: PaginationBarProps) {
 						}
 					>
 						{page < totalPages ? (
-							<Link to="." search={{ page: page + 1 }}>
+							<Link to="." search={(prev) => ({ ...prev, page: page + 1 })}>
 								{null}
 							</Link>
 						) : (

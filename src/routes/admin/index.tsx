@@ -62,6 +62,13 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "#/components/ui/popover";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "#/components/ui/select";
 import { TagsInput } from "#/components/ui/tags-input";
 import { CATEGORY_PREFIX, CREATOR_PREFIX, PUBLIC_TAG } from "#/lib/constants";
 import {
@@ -86,10 +93,15 @@ import {
 } from "#/lib/storage";
 
 const listFilesFn = createServerFn({ method: "GET" })
-	.inputValidator(z.object({ page: z.number().int().min(1) }))
+	.inputValidator(
+		z.object({
+			page: z.number().int().min(1),
+			perPage: z.number().int().min(1).max(300),
+		}),
+	)
 	.handler(async ({ data }) => {
 		const [files, creators, categories] = await Promise.all([
-			listFiles(data.page),
+			listFiles(data.page, data.perPage),
 			listCreators(),
 			listCategories(),
 		]);
@@ -204,15 +216,19 @@ const batchBindCreatorFn = createServerFn({ method: "POST" })
 		}
 	});
 
+const PER_PAGE_OPTIONS = [12, 24, 48, 96, 300] as const;
+
 const searchSchema = z.object({
 	page: z.coerce.number().int().min(1).catch(1),
+	perPage: z.coerce.number().int().min(1).max(300).catch(12),
 });
 
 export const Route = createFileRoute("/admin/")({
 	component: AdminPage,
 	validateSearch: searchSchema,
-	loaderDeps: ({ search }) => ({ page: search.page }),
-	loader: ({ deps }) => listFilesFn({ data: { page: deps.page } }),
+	loaderDeps: ({ search }) => ({ page: search.page, perPage: search.perPage }),
+	loader: ({ deps }) =>
+		listFilesFn({ data: { page: deps.page, perPage: deps.perPage } }),
 });
 
 interface TagRecord {
@@ -1070,8 +1086,9 @@ function AdminPage() {
 		creators,
 		categories,
 	} = Route.useLoaderData();
-	const { page } = Route.useSearch();
-	const totalPages = Math.ceil(total / 12);
+	const { page, perPage } = Route.useSearch();
+	const router = useRouter();
+	const totalPages = Math.ceil(total / perPage);
 	const [files, setFiles] = useState(() => toFileRecords(loaderItems));
 
 	useEffect(() => {
@@ -1211,21 +1228,46 @@ function AdminPage() {
 
 			{/* Batch Actions */}
 			{files.length > 0 && (
-				<div className="mb-4 flex items-center gap-3">
-					<Checkbox
-						checked={
-							selected.size === files.length
-								? true
-								: selected.size > 0
-									? "indeterminate"
-									: false
-						}
-						onCheckedChange={(checked) => {
-							if (checked) selectAll();
-							else clearSelection();
-						}}
-					/>
-					<span className="text-sm text-muted-foreground">全選</span>
+				<div className="mb-4 flex items-center justify-between">
+					<div className="flex items-center gap-3">
+						<Checkbox
+							checked={
+								selected.size === files.length
+									? true
+									: selected.size > 0
+										? "indeterminate"
+										: false
+							}
+							onCheckedChange={(checked) => {
+								if (checked) selectAll();
+								else clearSelection();
+							}}
+						/>
+						<span className="text-sm text-muted-foreground">全選</span>
+					</div>
+					<div className="flex items-center gap-2">
+						<span className="text-sm text-muted-foreground">每頁顯示</span>
+						<Select
+							value={String(perPage)}
+							onValueChange={(value) => {
+								router.navigate({
+									search: { page: 1, perPage: Number(value) },
+								});
+							}}
+						>
+							<SelectTrigger className="w-20">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{PER_PAGE_OPTIONS.map((n) => (
+									<SelectItem key={n} value={String(n)}>
+										{n}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						<span className="text-sm text-muted-foreground">筆</span>
+					</div>
 				</div>
 			)}
 
