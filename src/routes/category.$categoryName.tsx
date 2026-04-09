@@ -6,6 +6,7 @@ import CreatorPopover from "#/components/CreatorPopover";
 import PublicFooter from "#/components/PublicFooter";
 import PublicHeader from "#/components/PublicHeader";
 import { getAppName } from "#/lib/app-name";
+import { getSocialLinks } from "#/lib/social-links";
 import { listPublicCategoryObjects, type PublicObject } from "#/lib/storage";
 
 import publicCss from "../styles-public.css?url";
@@ -24,7 +25,7 @@ const loadCategoryFn = createServerFn({ method: "GET" })
 			data.categoryName,
 			data.page,
 		);
-		return { ...result, appName: getAppName() };
+		return { ...result, appName: getAppName(), socialLinks: getSocialLinks() };
 	});
 
 // --- Route ---
@@ -44,7 +45,7 @@ export const Route = createFileRoute("/category/$categoryName")({
 
 function CategoryPage() {
 	const { categoryName } = useParams({ from: "/category/$categoryName" });
-	const { items, total, appName } = Route.useLoaderData();
+	const { items, total, appName, socialLinks } = Route.useLoaderData();
 	const { page } = Route.useSearch();
 
 	const displayName = categoryName
@@ -134,7 +135,7 @@ function CategoryPage() {
 				</section>
 			</main>
 
-			<PublicFooter appName={appName} />
+			<PublicFooter appName={appName} socialLinks={socialLinks} />
 		</div>
 	);
 }

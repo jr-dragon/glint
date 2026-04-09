@@ -7,6 +7,7 @@ import PublicFooter from "#/components/PublicFooter";
 import PublicHeader from "#/components/PublicHeader";
 import { Button } from "#/components/ui/button";
 import { getAppName } from "#/lib/app-name";
+import { getSocialLinks } from "#/lib/social-links";
 import {
 	listFeaturedPublicObjects,
 	listPublicCategories,
@@ -22,7 +23,12 @@ const loadHomeFn = createServerFn({ method: "GET" }).handler(async () => {
 		listPublicCategories(),
 		listFeaturedPublicObjects(5),
 	]);
-	return { categories, featured, appName: getAppName() };
+	return {
+		categories,
+		featured,
+		appName: getAppName(),
+		socialLinks: getSocialLinks(),
+	};
 });
 
 // --- Route ---
@@ -36,7 +42,7 @@ export const Route = createFileRoute("/")({
 });
 
 function App() {
-	const { categories, featured, appName } = Route.useLoaderData();
+	const { categories, featured, appName, socialLinks } = Route.useLoaderData();
 	const [heroIndex, setHeroIndex] = useState(0);
 
 	const heroItem = featured[heroIndex];
@@ -183,7 +189,7 @@ function App() {
 				)}
 			</main>
 
-			<PublicFooter appName={appName} />
+			<PublicFooter appName={appName} socialLinks={socialLinks} />
 		</div>
 	);
 }
