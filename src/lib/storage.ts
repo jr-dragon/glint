@@ -188,54 +188,74 @@ export async function listCategoryObjects(
 }
 
 /** Fetch objects with their category tags in a single query, then group by category. */
-export async function listAllCategoryObjects(
-	page = 1,
-	perPage = 24,
-): Promise<{
+export async function listAllCategoryObjects(): Promise<{
 	categoryObjects: Record<string, CategoryObject[]>;
 	uncategorizedObjects: CategoryObject[];
-	total: number;
 }> {
 	const db = createPrismaClient();
-	const where = { deleted_at: null };
-	const [rows, total] = await Promise.all([
-		db.object.findMany({
-			where,
-			include: {
-				tags: {
-					where: { name: { startsWith: CATEGORY_PREFIX } },
-					select: { id: true },
-				},
+
+	const categoryTags = await db.tag.findMany({
+		where: { name: { startsWith: CATEGORY_PREFIX } },
+		include: {
+			objects: {
+				where: { deleted_at: null },
+				orderBy: { created_at: "desc" },
+				select: { id: true, path: true, metadata: true },
 			},
-			orderBy: { created_at: "desc" },
-			skip: (page - 1) * perPage,
-			take: perPage,
-		}),
-		db.object.count({ where }),
-	]);
+		},
+	});
 
 	const categoryObjects: Record<string, CategoryObject[]> = {};
-	const uncategorizedObjects: CategoryObject[] = [];
-
-	for (const r of rows) {
-		const obj: CategoryObject = {
-			id: r.id,
-			path: r.path,
-			metadata: r.metadata as CategoryObject["metadata"],
-		};
-		if (r.tags.length === 0) {
-			uncategorizedObjects.push(obj);
-		} else {
-			for (const tag of r.tags) {
-				if (!categoryObjects[tag.id]) {
-					categoryObjects[tag.id] = [];
-				}
-				categoryObjects[tag.id].push(obj);
-			}
-		}
+	for (const tag of categoryTags) {
+		categoryObjects[tag.id] = tag.objects.map((o) => ({
+			id: o.id,
+			path: o.path,
+			metadata: o.metadata as CategoryObject["metadata"],
+		}));
 	}
 
-	return { categoryObjects, uncategorizedObjects, total };
+	const uncategorizedRows = await db.object.findMany({
+		where: {
+			deleted_at: null,
+			tags: { none: { name: { startsWith: CATEGORY_PREFIX } } },
+		},
+		orderBy: { created_at: "desc" },
+		select: { id: true, path: true, metadata: true },
+	});
+	const uncategorizedObjects = uncategorizedRows.map((o) => ({
+		id: o.id,
+		path: o.path,
+		metadata: o.metadata as CategoryObject["metadata"],
+	}));
+
+	return { categoryObjects, uncategorizedObjects };
+}
+
+export async function listAllCreatorObjects(): Promise<
+	Record<string, CategoryObject[]>
+> {
+	const db = createPrismaClient();
+
+	const creatorTags = await db.tag.findMany({
+		where: { name: { startsWith: CREATOR_PREFIX } },
+		include: {
+			objects: {
+				where: { deleted_at: null },
+				orderBy: { created_at: "desc" },
+				select: { id: true, path: true, metadata: true },
+			},
+		},
+	});
+
+	const result: Record<string, CategoryObject[]> = {};
+	for (const tag of creatorTags) {
+		result[tag.id] = tag.objects.map((o) => ({
+			id: o.id,
+			path: o.path,
+			metadata: o.metadata as CategoryObject["metadata"],
+		}));
+	}
+	return result;
 }
 
 export async function bindObjectToCategory(

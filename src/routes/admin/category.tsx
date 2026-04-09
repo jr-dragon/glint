@@ -12,7 +12,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod/v4";
 import { FilePreview } from "#/components/FilePreview";
-import { PaginationBar } from "#/components/PaginationBar";
 import {
 	Accordion,
 	AccordionContent,
@@ -69,11 +68,11 @@ import {
 
 const listCategoriesFn = createServerFn({ method: "GET" })
 	.inputValidator(z.object({ page: z.number().int().min(1) }))
-	.handler(async ({ data }) => {
-		const [categories, { categoryObjects, uncategorizedObjects, total }] =
-			await Promise.all([listCategories(), listAllCategoryObjects(data.page)]);
+	.handler(async ({ data: _data }) => {
+		const [categories, { categoryObjects, uncategorizedObjects }] =
+			await Promise.all([listCategories(), listAllCategoryObjects()]);
 
-		return { categories, uncategorizedObjects, categoryObjects, total };
+		return { categories, uncategorizedObjects, categoryObjects };
 	});
 
 const createCategoryFn = createServerFn({ method: "POST" })
@@ -143,8 +142,6 @@ function ObjectCarousel({ objects }: { objects: CategoryObject[] }) {
 
 function CategoryPage() {
 	const loaderData = Route.useLoaderData();
-	const { page } = Route.useSearch();
-	const totalPages = Math.ceil(loaderData.total / 24);
 	const router = useRouter();
 
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -267,8 +264,6 @@ function CategoryPage() {
 					})}
 				</Accordion>
 			)}
-
-			<PaginationBar page={page} totalPages={totalPages} />
 
 			{/* Create / Edit Dialog */}
 			<Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
