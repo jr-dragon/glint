@@ -1251,6 +1251,7 @@ function AdminPage() {
 							value={String(perPage)}
 							onValueChange={(value) => {
 								router.navigate({
+									to: "/admin",
 									search: { page: 1, perPage: Number(value) },
 								});
 							}}
