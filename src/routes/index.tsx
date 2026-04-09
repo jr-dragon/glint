@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { ArrowLeft, ArrowRight, Library, Play } from "lucide-react";
 import { useState } from "react";
+import CreatorPopover from "#/components/CreatorPopover";
 import PublicFooter from "#/components/PublicFooter";
 import PublicHeader from "#/components/PublicHeader";
 import { Button } from "#/components/ui/button";
@@ -87,9 +88,14 @@ function App() {
 									</>
 								)}
 								{heroItem.creator && (
-									<span className="text-on-surface-variant text-sm font-medium">
-										@{heroItem.creator.name}
-									</span>
+									<CreatorPopover
+										name={heroItem.creator.name}
+										metadata={heroItem.creator.metadata}
+									>
+										<span className="text-on-surface-variant text-sm font-medium">
+											@{heroItem.creator.name}
+										</span>
+									</CreatorPopover>
 								)}
 							</div>
 							<h1 className="text-6xl md:text-8xl font-extrabold tracking-tighter text-on-surface mb-6 leading-[0.9] max-w-3xl">

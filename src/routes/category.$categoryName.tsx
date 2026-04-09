@@ -2,6 +2,7 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Heart, Library, Play, Plus } from "lucide-react";
 import { z } from "zod/v4";
+import CreatorPopover from "#/components/CreatorPopover";
 import PublicFooter from "#/components/PublicFooter";
 import PublicHeader from "#/components/PublicHeader";
 import { getAppName } from "#/lib/app-name";
@@ -183,7 +184,12 @@ function MediaCard({ item }: { item: PublicObject }) {
 				</h3>
 				{item.creator && (
 					<div className="flex items-center gap-3 mt-2 text-on-surface-variant text-xs tracking-wide">
-						<span>@{item.creator.name}</span>
+						<CreatorPopover
+							name={item.creator.name}
+							metadata={item.creator.metadata}
+						>
+							<span>@{item.creator.name}</span>
+						</CreatorPopover>
 					</div>
 				)}
 			</div>
