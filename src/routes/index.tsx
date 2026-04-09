@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { ArrowLeft, ArrowRight, Library, Play } from "lucide-react";
 import { useState } from "react";
 import CreatorPopover from "#/components/CreatorPopover";
+import { OptimizedImage } from "#/components/OptimizedImage";
 import PublicFooter from "#/components/PublicFooter";
 import PublicHeader from "#/components/PublicHeader";
 import { Button } from "#/components/ui/button";
@@ -57,10 +58,11 @@ function App() {
 					<section className="relative w-full h-[80vh] min-h-150 overflow-hidden group">
 						<div className="absolute inset-0">
 							{heroItem.metadata.mime.startsWith("image/") ? (
-								<img
+								<OptimizedImage
 									alt={heroItem.metadata.originalName}
 									className="w-full h-full object-cover"
 									src={`/api/files/${heroItem.path}`}
+									cfOptions={{ width: 1920, quality: 80 }}
 								/>
 							) : heroItem.metadata.mime.startsWith("video/") ? (
 								<video
@@ -212,10 +214,11 @@ function CategoryCard({ category }: { category: PublicCategoryWithCover }) {
 			className="group relative aspect-4/5 rounded-xl overflow-hidden bg-surface-container transition-all duration-300 hover:scale-[1.02] hover:bg-surface-bright cursor-pointer shadow-lg shadow-black/20 border border-outline-variant/10 block"
 		>
 			{category.cover?.metadata.mime.startsWith("image/") ? (
-				<img
+				<OptimizedImage
 					className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
 					src={`/api/files/${category.cover.path}`}
 					alt={category.name}
+					cfOptions={{ width: 640, quality: 75 }}
 				/>
 			) : (
 				<div className="absolute inset-0 w-full h-full bg-surface-container-high" />
