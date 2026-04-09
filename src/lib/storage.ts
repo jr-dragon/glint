@@ -427,7 +427,7 @@ export async function listPublicCategories(): Promise<
 				},
 			},
 		},
-		orderBy: { created_at: "asc" },
+		orderBy: { created_at: "desc" },
 	});
 
 	return tags

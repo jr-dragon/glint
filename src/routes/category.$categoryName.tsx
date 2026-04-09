@@ -1,13 +1,21 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { Heart, Library, Play, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Library, Play } from "lucide-react";
 import { z } from "zod/v4";
 import CreatorPopover from "#/components/CreatorPopover";
 import PublicFooter from "#/components/PublicFooter";
 import PublicHeader from "#/components/PublicHeader";
+import { buttonVariants } from "#/components/ui/button";
+import {
+	Pagination,
+	PaginationContent,
+	PaginationEllipsis,
+	PaginationItem,
+} from "#/components/ui/pagination";
 import { getAppName } from "#/lib/app-name";
 import { getSocialLinks } from "#/lib/social-links";
 import { listPublicCategoryObjects, type PublicObject } from "#/lib/storage";
+import { cn } from "#/lib/utils";
 
 import publicCss from "../styles-public.css?url";
 
@@ -99,37 +107,12 @@ function CategoryPage() {
 
 					{/* Pagination */}
 					{totalPages > 1 && (
-						<div className="mt-20 flex justify-center gap-4">
-							{page > 1 && (
-								<Link
-									to="/category/$categoryName"
-									params={{ categoryName }}
-									search={{ page: page - 1 }}
-									className="group flex flex-col items-center gap-4"
-								>
-									<span className="text-on-surface-variant text-sm tracking-widest uppercase font-bold hover:text-primary transition-colors">
-										Previous
-									</span>
-								</Link>
-							)}
-							<span className="text-on-surface-variant text-sm tracking-widest uppercase">
-								{page} / {totalPages}
-							</span>
-							{page < totalPages && (
-								<Link
-									to="/category/$categoryName"
-									params={{ categoryName }}
-									search={{ page: page + 1 }}
-									className="group flex flex-col items-center gap-4"
-								>
-									<div className="w-12 h-12 rounded-full border border-outline-variant/30 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/50 transition-all">
-										<Plus className="text-primary w-6 h-6" />
-									</div>
-									<span className="text-on-surface-variant text-sm tracking-widest uppercase font-bold">
-										Load More
-									</span>
-								</Link>
-							)}
+						<div className="mt-20">
+							<CategoryPagination
+								categoryName={categoryName}
+								page={page}
+								totalPages={totalPages}
+							/>
 						</div>
 					)}
 				</section>
@@ -137,6 +120,89 @@ function CategoryPage() {
 
 			<PublicFooter appName={appName} socialLinks={socialLinks} />
 		</div>
+	);
+}
+
+function CategoryPagination({
+	categoryName,
+	page,
+	totalPages,
+}: {
+	categoryName: string;
+	page: number;
+	totalPages: number;
+}) {
+	const pageNumbers: (number | "ellipsis")[] = [];
+	for (let i = 1; i <= totalPages; i++) {
+		if (i === 1 || i === totalPages || (i >= page - 1 && i <= page + 1)) {
+			pageNumbers.push(i);
+		} else if (pageNumbers[pageNumbers.length - 1] !== "ellipsis") {
+			pageNumbers.push("ellipsis");
+		}
+	}
+
+	const linkProps = (p: number) =>
+		({
+			to: "/category/$categoryName",
+			params: { categoryName },
+			search: { page: p },
+		}) as const;
+
+	return (
+		<Pagination>
+			<PaginationContent>
+				{page > 1 && (
+					<PaginationItem>
+						<Link
+							{...linkProps(page - 1)}
+							aria-label="Go to previous page"
+							className={cn(
+								buttonVariants({ variant: "ghost", size: "default" }),
+								"gap-1 px-2.5 sm:pl-2.5",
+							)}
+						>
+							<ChevronLeft />
+							<span className="hidden sm:block">Previous</span>
+						</Link>
+					</PaginationItem>
+				)}
+				{pageNumbers.map((p, _i, arr) =>
+					p === "ellipsis" ? (
+						<PaginationItem key={`ellipsis-after-${arr[_i - 1]}`}>
+							<PaginationEllipsis />
+						</PaginationItem>
+					) : (
+						<PaginationItem key={p}>
+							<Link
+								{...linkProps(p)}
+								aria-current={p === page ? "page" : undefined}
+								className={buttonVariants({
+									variant: p === page ? "outline" : "ghost",
+									size: "icon",
+								})}
+							>
+								{p}
+							</Link>
+						</PaginationItem>
+					),
+				)}
+				{page < totalPages && (
+					<PaginationItem>
+						<Link
+							{...linkProps(page + 1)}
+							aria-label="Go to next page"
+							className={cn(
+								buttonVariants({ variant: "ghost", size: "default" }),
+								"gap-1 px-2.5 sm:pr-2.5",
+							)}
+						>
+							<span className="hidden sm:block">Next</span>
+							<ChevronRight />
+						</Link>
+					</PaginationItem>
+				)}
+			</PaginationContent>
+		</Pagination>
 	);
 }
 
