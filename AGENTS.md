@@ -74,7 +74,7 @@ Two Prisma models with a many-to-many relationship:
 - **Object** — Media files stored in R2 (`path` = R2 key, `metadata` = JSON with mime/size/originalName, soft-delete via `deleted_at`)
 - **Tag** — Polymorphic tag system with prefixed names:
   - `system:category:{name}` — Category classification (one per object)
-  - `system:creator:{name}` — Creator attribution (one per object), with optional `metadata` JSON for social links
+  - `system:creator:{name}` — Creator attribution (multiple per object), with optional `metadata` JSON for social links
   - `system:public` — Public visibility flag
   - `user:{name}` — User-defined tags (multiple per object)
 

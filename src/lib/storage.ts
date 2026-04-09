@@ -472,11 +472,16 @@ export async function listPublicCategories(): Promise<
 		});
 }
 
+export interface PublicCreator {
+	name: string;
+	metadata: Record<string, string> | null;
+}
+
 export interface PublicObject {
 	id: string;
 	path: string;
 	metadata: { mime: string; size: number; originalName: string };
-	creator: { name: string; metadata: Record<string, string> | null } | null;
+	creators: PublicCreator[];
 	userTags: string[];
 }
 
@@ -528,7 +533,12 @@ export async function listPublicCategoryObjects(
 
 	return {
 		items: rows.map((r) => {
-			const creatorTag = r.tags.find((t) => t.name.startsWith(CREATOR_PREFIX));
+			const creators = r.tags
+				.filter((t) => t.name.startsWith(CREATOR_PREFIX))
+				.map((t) => ({
+					name: t.name.slice(CREATOR_PREFIX.length),
+					metadata: (t.metadata as Record<string, string> | null) ?? null,
+				}));
 			const userTags = r.tags
 				.filter((t) => t.name.startsWith("user:"))
 				.map((t) => t.name.slice(5));
@@ -536,13 +546,7 @@ export async function listPublicCategoryObjects(
 				id: r.id,
 				path: r.path,
 				metadata: r.metadata as PublicObject["metadata"],
-				creator: creatorTag
-					? {
-							name: creatorTag.name.slice(CREATOR_PREFIX.length),
-							metadata:
-								(creatorTag.metadata as Record<string, string> | null) ?? null,
-						}
-					: null,
+				creators,
 				userTags,
 			};
 		}),
@@ -579,7 +583,12 @@ export async function listFeaturedPublicObjects(
 
 	return rows.map((r) => {
 		const categoryTag = r.tags.find((t) => t.name.startsWith(CATEGORY_PREFIX));
-		const creatorTag = r.tags.find((t) => t.name.startsWith(CREATOR_PREFIX));
+		const creators = r.tags
+			.filter((t) => t.name.startsWith(CREATOR_PREFIX))
+			.map((t) => ({
+				name: t.name.slice(CREATOR_PREFIX.length),
+				metadata: (t.metadata as Record<string, string> | null) ?? null,
+			}));
 		const userTags = r.tags
 			.filter((t) => t.name.startsWith("user:"))
 			.map((t) => t.name.slice(5));
@@ -590,13 +599,7 @@ export async function listFeaturedPublicObjects(
 			category: categoryTag
 				? categoryTag.name.slice(CATEGORY_PREFIX.length)
 				: null,
-			creator: creatorTag
-				? {
-						name: creatorTag.name.slice(CREATOR_PREFIX.length),
-						metadata:
-							(creatorTag.metadata as Record<string, string> | null) ?? null,
-					}
-				: null,
+			creators,
 			userTags,
 		};
 	});
