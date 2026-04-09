@@ -1,213 +1,65 @@
-Welcome to your new TanStack Start app! 
+# Glint
 
-# Getting Started
+個人媒體管理應用程式，使用 TanStack Start 建構，部署在 Cloudflare Workers 上。使用 Cloudflare R2 儲存媒體檔案，D1 作為資料庫。
 
-To run this application:
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/jr-dragon/glint)
+
+## 功能特色
+
+- 媒體檔案上傳與管理（圖片、影片）
+- 分類（Category）與創作者（Creator）標籤系統
+- 自訂標籤
+- 公開 / 私人可見性控制
+- 透過 Cloudflare Image Resizing 自動最佳化圖片
+- 公開展示頁面（沉浸式深色主題）
+- 管理後台透過 Cloudflare Access 保護
+
+## 技術棧
+
+- **框架**: TanStack Start（React 19，檔案路由）
+- **執行環境**: Cloudflare Workers（`nodejs_compat`）
+- **儲存**: Cloudflare R2（媒體檔案）、Cloudflare D1（資料庫）
+- **ORM**: Prisma（D1 Adapter）
+- **UI**: shadcn/ui、Tailwind CSS v4、Lucide Icons
+- **語言**: TypeScript（strict mode）
+- **套件管理**: Bun
+- **Linter / Formatter**: Biome
+- **測試**: Vitest + Testing Library
+
+## 快速開始
 
 ```bash
+# 安裝依賴
 bun install
-bun --bun run dev
+
+# 啟動開發伺服器（port 3000）
+bun dev
 ```
 
-# Building For Production
+## 指令
 
-To build this application for production:
+| 指令 | 說明 |
+|------|------|
+| `bun dev` | 啟動開發伺服器 |
+| `bun run build` | 正式環境建置 |
+| `bun run deploy` | 建置並部署至 Cloudflare Workers |
+| `bun run cf-typegen` | 產生 Cloudflare binding 型別 |
+| `bun run migrate` | 執行 D1 資料庫遷移 |
+| `bun test` | 執行測試 |
+| `bun run check` | 執行 Biome lint + format 檢查 |
+| `bun run check --fix` | 自動修正 lint 和格式問題 |
 
-```bash
-bun --bun run build
-```
+## 部署
 
-## Testing
+### 前置需求
 
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+- [Cloudflare 帳號](https://dash.cloudflare.com/)
+- 建立 D1 資料庫與 R2 Bucket
+- 設定 Cloudflare Access（保護 `/admin` 路由）
 
-```bash
-bun --bun run test
-```
+### 步驟
 
-## Styling
-
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-### Removing Tailwind CSS
-
-If you prefer not to use Tailwind CSS:
-
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Uninstall the packages: `bun install @tailwindcss/vite tailwindcss -D`
-
-## Linting & Formatting
-
-This project uses [Biome](https://biomejs.dev/) for linting and formatting. The following scripts are available:
-
-
-```bash
-bun --bun run lint
-bun --bun run format
-bun --bun run check
-```
-
-
-## Shadcn
-
-Add components using the latest version of [Shadcn](https://ui.shadcn.com/).
-
-```bash
-pnpm dlx shadcn@latest add button
-```
-
-
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+1. 在 `wrangler.jsonc` 中設定你的 D1 database ID 與 R2 bucket name
+2. 設定環境變數（`APP_NAME`、`CF_ACCESS_TEAM_DOMAIN`、`CF_ACCESS_POLICY_AUD` 等）
+3. 執行資料庫遷移：`bun run migrate`
+4. 部署：`bun run deploy`

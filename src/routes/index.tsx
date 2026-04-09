@@ -87,16 +87,17 @@ function App() {
 						{/* Carousel Content Overlay */}
 						<div className="absolute bottom-0 left-0 w-full p-12 md:p-24 flex flex-col items-start max-w-4xl">
 							<div className="flex items-center gap-3 mb-4">
-								{heroItem.creator && (
+								{heroItem.creators.map((creator) => (
 									<CreatorPopover
-										name={heroItem.creator.name}
-										metadata={heroItem.creator.metadata}
+										key={creator.name}
+										name={creator.name}
+										metadata={creator.metadata}
 									>
 										<span className="text-on-surface-variant text-sm font-medium">
-											@{heroItem.creator.name}
+											@{creator.name}
 										</span>
 									</CreatorPopover>
-								)}
+								))}
 							</div>
 							{heroItem.userTags.length > 0 && (
 								<div className="flex flex-wrap items-center gap-2 mb-6">

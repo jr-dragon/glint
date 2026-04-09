@@ -245,14 +245,17 @@ function MediaCard({ item }: { item: PublicObject }) {
 				)}
 			</div>
 			<div>
-				{item.creator && (
-					<div className="flex items-center gap-3 mt-1 text-on-surface-variant text-xs tracking-wide">
-						<CreatorPopover
-							name={item.creator.name}
-							metadata={item.creator.metadata}
-						>
-							<span>@{item.creator.name}</span>
-						</CreatorPopover>
+				{item.creators.length > 0 && (
+					<div className="flex items-center gap-3 mt-1 text-on-surface-variant text-xs tracking-wide flex-wrap">
+						{item.creators.map((creator) => (
+							<CreatorPopover
+								key={creator.name}
+								name={creator.name}
+								metadata={creator.metadata}
+							>
+								<span>@{creator.name}</span>
+							</CreatorPopover>
+						))}
 					</div>
 				)}
 				{item.userTags.length > 0 && (
