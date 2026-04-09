@@ -110,10 +110,16 @@ export async function removeTagFromFile(
 
 // --- Category (implemented as system:category:{value} tags) ---
 
+export interface CategoryMetadata {
+	displayName?: string;
+	period?: string;
+}
+
 export interface CategoryRecord {
 	id: string;
 	name: string;
 	value: string;
+	metadata: CategoryMetadata | null;
 	objectCount: number;
 }
 
@@ -131,28 +137,51 @@ export async function listCategories(): Promise<CategoryRecord[]> {
 		id: tag.id,
 		name: tag.name.slice(CATEGORY_PREFIX.length),
 		value: tag.name,
+		metadata: (tag.metadata as CategoryMetadata | null) ?? null,
 		objectCount: tag.objects.length,
 	}));
 }
 
-export async function createCategory(name: string): Promise<CategoryRecord> {
+export async function createCategory(
+	name: string,
+	metadata?: CategoryMetadata | null,
+): Promise<CategoryRecord> {
 	const db = createPrismaClient();
 	const tagName = `${CATEGORY_PREFIX}${name}`;
-	const tag = await db.tag.create({ data: { name: tagName } });
-	return { id: tag.id, name, value: tag.name, objectCount: 0 };
+	const tag = await db.tag.create({
+		data: { name: tagName, metadata: metadata ?? undefined },
+	});
+	return {
+		id: tag.id,
+		name,
+		value: tag.name,
+		metadata: (tag.metadata as CategoryMetadata | null) ?? null,
+		objectCount: 0,
+	};
 }
 
 export async function updateCategory(
 	id: string,
 	newName: string,
+	metadata?: CategoryMetadata | null,
 ): Promise<CategoryRecord> {
 	const db = createPrismaClient();
 	const tagName = `${CATEGORY_PREFIX}${newName}`;
-	const tag = await db.tag.update({ where: { id }, data: { name: tagName } });
+	const data: Prisma.TagUpdateInput = { name: tagName };
+	if (metadata !== undefined) {
+		data.metadata = metadata ?? undefined;
+	}
+	const tag = await db.tag.update({ where: { id }, data });
 	const count = await db.object.count({
 		where: { deleted_at: null, tags: { some: { id } } },
 	});
-	return { id: tag.id, name: newName, value: tag.name, objectCount: count };
+	return {
+		id: tag.id,
+		name: newName,
+		value: tag.name,
+		metadata: (tag.metadata as CategoryMetadata | null) ?? null,
+		objectCount: count,
+	};
 }
 
 export async function deleteCategory(id: string): Promise<void> {
