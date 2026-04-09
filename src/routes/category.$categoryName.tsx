@@ -34,7 +34,11 @@ const loadCategoryFn = createServerFn({ method: "GET" })
 			data.categoryName,
 			data.page,
 		);
-		return { ...result, appName: getAppName(), socialLinks: getSocialLinks() };
+		return {
+			...result,
+			appName: getAppName(),
+			socialLinks: getSocialLinks(),
+		};
 	});
 
 // --- Route ---
@@ -54,13 +58,9 @@ export const Route = createFileRoute("/category/$categoryName")({
 
 function CategoryPage() {
 	const { categoryName } = useParams({ from: "/category/$categoryName" });
-	const { items, total, appName, socialLinks } = Route.useLoaderData();
+	const { items, total, appName, socialLinks, displayName } =
+		Route.useLoaderData();
 	const { page } = Route.useSearch();
-
-	const displayName = categoryName
-		.split("-")
-		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-		.join(" ");
 
 	const perPage = 24;
 	const totalPages = Math.ceil(total / perPage);

@@ -1,6 +1,8 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn, useServerFn } from "@tanstack/react-start";
+import { format, parseISO } from "date-fns";
 import {
+	CalendarIcon,
 	ChevronDownIcon,
 	EditIcon,
 	FolderTreeIcon,
@@ -29,6 +31,7 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
+import { Calendar } from "#/components/ui/calendar";
 import { Card } from "#/components/ui/card";
 import {
 	Carousel,
@@ -55,6 +58,12 @@ import {
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "#/components/ui/popover";
+import {
+	type CategoryMetadata,
 	type CategoryObject,
 	type CategoryRecord,
 	createCategory,
@@ -75,16 +84,35 @@ const listCategoriesFn = createServerFn({ method: "GET" })
 		return { categories, uncategorizedObjects, categoryObjects };
 	});
 
+const categoryMetadataSchema = z
+	.object({
+		displayName: z.string().optional(),
+		period: z.string().optional(),
+	})
+	.nullable()
+	.optional();
+
 const createCategoryFn = createServerFn({ method: "POST" })
-	.inputValidator(z.object({ name: z.string().min(1) }))
+	.inputValidator(
+		z.object({
+			name: z.string().min(1),
+			metadata: categoryMetadataSchema,
+		}),
+	)
 	.handler(async ({ data }) => {
-		return createCategory(data.name);
+		return createCategory(data.name, data.metadata);
 	});
 
 const updateCategoryFn = createServerFn({ method: "POST" })
-	.inputValidator(z.object({ id: z.string(), name: z.string().min(1) }))
+	.inputValidator(
+		z.object({
+			id: z.string(),
+			name: z.string().min(1),
+			metadata: categoryMetadataSchema,
+		}),
+	)
 	.handler(async ({ data }) => {
-		return updateCategory(data.id, data.name);
+		return updateCategory(data.id, data.name, data.metadata);
 	});
 
 const deleteCategoryFn = createServerFn({ method: "POST" })
@@ -140,6 +168,47 @@ function ObjectCarousel({ objects }: { objects: CategoryObject[] }) {
 	);
 }
 
+function DatePicker({
+	value,
+	onChange,
+	placeholder,
+}: {
+	value: string;
+	onChange: (value: string) => void;
+	placeholder: string;
+}) {
+	const [open, setOpen] = useState(false);
+	const selected = value ? parseISO(value) : undefined;
+
+	return (
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger asChild>
+				<Button
+					variant="outline"
+					className="w-full justify-start text-left font-normal"
+				>
+					<CalendarIcon className="mr-2 size-4" />
+					{selected ? (
+						format(selected, "yyyy-MM-dd")
+					) : (
+						<span className="text-muted-foreground">{placeholder}</span>
+					)}
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent className="w-auto p-0" align="start">
+				<Calendar
+					mode="single"
+					selected={selected}
+					onSelect={(date) => {
+						onChange(date ? format(date, "yyyy-MM-dd") : "");
+						setOpen(false);
+					}}
+				/>
+			</PopoverContent>
+		</Popover>
+	);
+}
+
 function CategoryPage() {
 	const loaderData = Route.useLoaderData();
 	const router = useRouter();
@@ -147,6 +216,9 @@ function CategoryPage() {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [editTarget, setEditTarget] = useState<CategoryRecord | null>(null);
 	const [formName, setFormName] = useState("");
+	const [formDisplayName, setFormDisplayName] = useState("");
+	const [formPeriodStart, setFormPeriodStart] = useState("");
+	const [formPeriodEnd, setFormPeriodEnd] = useState("");
 	const [deleteTarget, setDeleteTarget] = useState<CategoryRecord | null>(null);
 
 	const createCat = useServerFn(createCategoryFn);
@@ -155,27 +227,52 @@ function CategoryPage() {
 
 	const { categories, categoryObjects } = loaderData;
 
+	function parsePeriod(period?: string): { start: string; end: string } {
+		if (!period) return { start: "", end: "" };
+		const parts = period.split(",");
+		return { start: parts[0] ?? "", end: parts[1] ?? "" };
+	}
+
+	function buildMetadata(): CategoryMetadata | null {
+		const meta: CategoryMetadata = {};
+		if (formDisplayName.trim()) meta.displayName = formDisplayName.trim();
+		const start = formPeriodStart.trim();
+		const end = formPeriodEnd.trim();
+		if (start) {
+			meta.period = end ? `${start},${end}` : start;
+		}
+		return Object.keys(meta).length > 0 ? meta : null;
+	}
+
 	function openCreate() {
 		setEditTarget(null);
 		setFormName("");
+		setFormDisplayName("");
+		setFormPeriodStart("");
+		setFormPeriodEnd("");
 		setEditDialogOpen(true);
 	}
 
 	function openEdit(cat: CategoryRecord) {
 		setEditTarget(cat);
 		setFormName(cat.name);
+		setFormDisplayName(cat.metadata?.displayName ?? "");
+		const { start, end } = parsePeriod(cat.metadata?.period);
+		setFormPeriodStart(start);
+		setFormPeriodEnd(end);
 		setEditDialogOpen(true);
 	}
 
 	async function handleSave() {
 		if (!formName.trim()) return;
+		const metadata = buildMetadata();
 		try {
 			if (editTarget) {
 				await updateCat({
-					data: { id: editTarget.id, name: formName.trim() },
+					data: { id: editTarget.id, name: formName.trim(), metadata },
 				});
 			} else {
-				await createCat({ data: { name: formName.trim() } });
+				await createCat({ data: { name: formName.trim(), metadata } });
 			}
 			setEditDialogOpen(false);
 			router.invalidate();
@@ -227,7 +324,19 @@ function CategoryPage() {
 									<AccordionPrimitive.Trigger className="flex flex-1 items-start justify-between gap-4 rounded-md py-4 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [&[data-state=open]>svg]:rotate-180">
 										<div className="flex flex-1 items-center gap-3">
 											<span className="font-medium">{cat.name}</span>
+											{cat.metadata?.displayName && (
+												<span className="text-xs text-muted-foreground">
+													({cat.metadata.displayName})
+												</span>
+											)}
 											<Badge variant="secondary">{cat.objectCount}</Badge>
+											{cat.metadata?.period && (
+												<span className="text-xs text-muted-foreground">
+													{cat.metadata.period.includes(",")
+														? cat.metadata.period.replace(",", " ～ ")
+														: cat.metadata.period}
+												</span>
+											)}
 										</div>
 										<ChevronDownIcon className="pointer-events-none size-4 shrink-0 translate-y-0.5 text-muted-foreground transition-transform duration-200" />
 									</AccordionPrimitive.Trigger>
@@ -285,6 +394,30 @@ function CategoryPage() {
 								onChange={(e) => setFormName(e.target.value)}
 								placeholder="例如：獸無限 2026"
 							/>
+						</div>
+						<div className="grid gap-2">
+							<Label htmlFor="cat-display-name">顯示名稱</Label>
+							<Input
+								id="cat-display-name"
+								value={formDisplayName}
+								onChange={(e) => setFormDisplayName(e.target.value)}
+								placeholder="前台顯示用，留空則使用名稱"
+							/>
+						</div>
+						<div className="grid gap-2">
+							<Label>活動期間</Label>
+							<div className="grid items-center gap-2">
+								<DatePicker
+									value={formPeriodStart}
+									onChange={setFormPeriodStart}
+									placeholder="開始日期"
+								/>
+								<DatePicker
+									value={formPeriodEnd}
+									onChange={setFormPeriodEnd}
+									placeholder="結束日期（留空為單日）"
+								/>
+							</div>
 						</div>
 					</div>
 					<DialogFooter>

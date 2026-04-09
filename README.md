@@ -63,3 +63,15 @@ bun dev
 2. 設定環境變數（`APP_NAME`、`CF_ACCESS_TEAM_DOMAIN`、`CF_ACCESS_POLICY_AUD` 等）
 3. 執行資料庫遷移：`bun run migrate`
 4. 部署：`bun run deploy`
+
+## 修改介面
+
+如果用戶想要修改前端介面，可以按照以下步驟：
+
+1. 利用 [Google Stitch](https://stitch.withgoogle.com) 建立你覺得合適的視覺設計，至少需要產生一份設計指南（通常會包含需要什麼配色、字體、視覺效果圖）、首頁與分類頁
+2. 將以上的成果用 .zip 的形式下載下來，並且解壓後放到 `.tmp` 資料夾下，並找到 `DESIGN.md`，用它替換掉現有的 `DESIGN.md`
+3. 使用 Gemini CLI 或 Claude Code，輸入以下 prompt
+  ```
+參考 @.tmp/stitch 底下的設計稿與 @DESIGN.md，重新設計 @src/routes/index.tsx 與 @src/routes/category.$categoryName.tsx，如果有需要的話可以一併更改 @src/styles-public.css 與 @components/PublicFooter.tsx 及 @components/PublicHeader.tsx，優先使用 @src/components/ui 下的 Shadcn Components
+  ```
+4. 反覆調整 prompt，然後找到自己覺得合適的樣式即可
