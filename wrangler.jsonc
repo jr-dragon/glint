@@ -22,6 +22,7 @@
     },
   ],
   "vars": {
+    "APP_NAME": "",
     "CF_ACCESS_TEAM_DOMAIN": "chivincent",
     "CF_ACCESS_POLICY_AUD": "e4952aad8fbfe75deab2c259db134a934ba1558a269612d7e0b483a85bd88080",
   },

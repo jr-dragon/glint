@@ -2,6 +2,7 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Heart, Library, Play, Plus, Share2 } from "lucide-react";
 import { z } from "zod/v4";
+import { getAppName } from "#/lib/app-name";
 import { listPublicCategoryObjects, type PublicObject } from "#/lib/storage";
 
 import publicCss from "../styles-public.css?url";
@@ -16,7 +17,11 @@ const loadCategoryFn = createServerFn({ method: "GET" })
 		}),
 	)
 	.handler(async ({ data }) => {
-		return listPublicCategoryObjects(data.categoryName, data.page);
+		const result = await listPublicCategoryObjects(
+			data.categoryName,
+			data.page,
+		);
+		return { ...result, appName: getAppName() };
 	});
 
 // --- Route ---
@@ -36,7 +41,7 @@ export const Route = createFileRoute("/category/$categoryName")({
 
 function CategoryPage() {
 	const { categoryName } = useParams({ from: "/category/$categoryName" });
-	const { items, total } = Route.useLoaderData();
+	const { items, total, appName } = Route.useLoaderData();
 	const { page } = Route.useSearch();
 
 	const displayName = categoryName
@@ -55,7 +60,7 @@ function CategoryPage() {
 					to="/"
 					className="text-2xl font-bold tracking-tighter text-primary"
 				>
-					Glint
+					{appName}
 				</Link>
 			</nav>
 
@@ -138,7 +143,7 @@ function CategoryPage() {
 			<footer className="bg-surface w-full py-12 border-t border-outline-variant/15">
 				<div className="flex flex-col md:flex-row justify-between items-center px-8 max-w-7xl mx-auto w-full gap-8">
 					<div className="flex flex-col gap-2">
-						<div className="text-lg font-bold text-on-surface">Glint</div>
+						<div className="text-lg font-bold text-on-surface">{appName}</div>
 						<p className="text-sm tracking-wide text-on-surface-variant">
 							© {new Date().getFullYear()} All rights reserved.
 						</p>

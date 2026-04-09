@@ -6,12 +6,18 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { createServerFn } from "@tanstack/react-start";
+import { getAppName } from "#/lib/app-name";
 import { Toaster } from "../components/ui/sonner";
 
 import appCss from "../styles.css?url";
 
+const loadRootFn = createServerFn({ method: "GET" }).handler(async () => {
+	return { appName: getAppName() };
+});
+
 export const Route = createRootRoute({
-	head: () => ({
+	head: ({ loaderData }) => ({
 		meta: [
 			{
 				charSet: "utf-8",
@@ -21,7 +27,7 @@ export const Route = createRootRoute({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "Glint",
+				title: loaderData?.appName ?? "Glint",
 			},
 		],
 		links: [
@@ -31,6 +37,7 @@ export const Route = createRootRoute({
 			},
 		],
 	}),
+	loader: () => loadRootFn(),
 	component: RootComponent,
 	shellComponent: RootDocument,
 });

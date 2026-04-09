@@ -6,6 +6,7 @@ declare namespace Cloudflare {
 		mainModule: typeof import("./src/entry.server");
 	}
 	interface Env {
+		APP_NAME: string;
 		STORAGE: R2Bucket;
 		DB: D1Database;
 		CF_ACCESS_TEAM_DOMAIN: "";
