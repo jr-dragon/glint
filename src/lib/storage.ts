@@ -477,6 +477,7 @@ export interface PublicObject {
 	path: string;
 	metadata: { mime: string; size: number; originalName: string };
 	creator: { name: string; metadata: Record<string, string> | null } | null;
+	userTags: string[];
 }
 
 /** List public objects within a category, identified by category name. */
@@ -509,7 +510,12 @@ export async function listPublicCategoryObjects(
 			where,
 			include: {
 				tags: {
-					where: { name: { startsWith: CREATOR_PREFIX } },
+					where: {
+						OR: [
+							{ name: { startsWith: CREATOR_PREFIX } },
+							{ name: { startsWith: "user:" } },
+						],
+					},
 					select: { name: true, metadata: true },
 				},
 			},
@@ -522,7 +528,10 @@ export async function listPublicCategoryObjects(
 
 	return {
 		items: rows.map((r) => {
-			const creatorTag = r.tags[0];
+			const creatorTag = r.tags.find((t) => t.name.startsWith(CREATOR_PREFIX));
+			const userTags = r.tags
+				.filter((t) => t.name.startsWith("user:"))
+				.map((t) => t.name.slice(5));
 			return {
 				id: r.id,
 				path: r.path,
@@ -534,6 +543,7 @@ export async function listPublicCategoryObjects(
 								(creatorTag.metadata as Record<string, string> | null) ?? null,
 						}
 					: null,
+				userTags,
 			};
 		}),
 		total,
@@ -557,6 +567,7 @@ export async function listFeaturedPublicObjects(
 					OR: [
 						{ name: { startsWith: CATEGORY_PREFIX } },
 						{ name: { startsWith: CREATOR_PREFIX } },
+						{ name: { startsWith: "user:" } },
 					],
 				},
 				select: { name: true, metadata: true },
@@ -569,6 +580,9 @@ export async function listFeaturedPublicObjects(
 	return rows.map((r) => {
 		const categoryTag = r.tags.find((t) => t.name.startsWith(CATEGORY_PREFIX));
 		const creatorTag = r.tags.find((t) => t.name.startsWith(CREATOR_PREFIX));
+		const userTags = r.tags
+			.filter((t) => t.name.startsWith("user:"))
+			.map((t) => t.name.slice(5));
 		return {
 			id: r.id,
 			path: r.path,
@@ -583,6 +597,7 @@ export async function listFeaturedPublicObjects(
 							(creatorTag.metadata as Record<string, string> | null) ?? null,
 					}
 				: null,
+			userTags,
 		};
 	});
 }

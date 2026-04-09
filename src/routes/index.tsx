@@ -84,7 +84,7 @@ function App() {
 
 						{/* Carousel Content Overlay */}
 						<div className="absolute bottom-0 left-0 w-full p-12 md:p-24 flex flex-col items-start max-w-4xl">
-							<div className="flex items-center gap-3 mb-6">
+							<div className="flex items-center gap-3 mb-4">
 								{heroItem.creator && (
 									<CreatorPopover
 										name={heroItem.creator.name}
@@ -96,6 +96,23 @@ function App() {
 									</CreatorPopover>
 								)}
 							</div>
+							{heroItem.userTags.length > 0 && (
+								<div className="flex flex-wrap items-center gap-2 mb-6">
+									{heroItem.userTags.slice(0, 5).map((tag) => (
+										<span
+											key={tag}
+											className="inline-flex items-center rounded-full bg-surface-container-high/60 backdrop-blur-sm px-3 py-1 text-xs font-medium text-on-surface-variant"
+										>
+											{tag}
+										</span>
+									))}
+									{heroItem.userTags.length > 5 && (
+										<span className="text-xs text-on-surface-variant/60">
+											+{heroItem.userTags.length - 5}
+										</span>
+									)}
+								</div>
+							)}
 							<h1 className="text-6xl md:text-8xl font-extrabold tracking-tighter text-on-surface mb-6 leading-[0.9] max-w-3xl">
 								{heroItem.category}
 							</h1>
