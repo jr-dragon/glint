@@ -117,7 +117,7 @@ function App() {
 								</div>
 							)}
 							<h1 className="text-6xl md:text-8xl font-extrabold tracking-tighter text-on-surface mb-6 leading-[0.9] max-w-3xl">
-								{heroItem.category}
+								{heroItem.categoryDisplayName ?? heroItem.category}
 							</h1>
 							{heroItem.category && (
 								<div className="flex items-center gap-4">
@@ -227,7 +227,7 @@ function CategoryCard({ category }: { category: PublicCategoryWithCover }) {
 			<div className="absolute inset-0 bg-linear-to-t from-surface-container-lowest via-transparent to-transparent opacity-90" />
 			<div className="absolute bottom-0 left-0 p-8 w-full">
 				<h3 className="text-2xl font-bold text-on-surface mb-1">
-					{category.name}
+					{category.displayName}
 				</h3>
 				<p className="text-on-surface-variant text-sm flex items-center gap-2">
 					<Library className="w-4 h-4" /> {category.objectCount} Assets

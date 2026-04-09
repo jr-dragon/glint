@@ -448,6 +448,7 @@ export async function unsetObjectPublic(objectId: string): Promise<void> {
 export interface PublicCategoryWithCover {
 	id: string;
 	name: string;
+	displayName: string;
 	objectCount: number;
 	cover: {
 		path: string;
@@ -484,9 +485,12 @@ export async function listPublicCategories(): Promise<
 		.map((tag) => {
 			const first = tag.objects[0];
 			const meta = first?.metadata as Record<string, unknown> | undefined;
+			const catMeta = tag.metadata as CategoryMetadata | null;
+			const name = tag.name.slice(CATEGORY_PREFIX.length);
 			return {
 				id: tag.id,
-				name: tag.name.slice(CATEGORY_PREFIX.length),
+				name,
+				displayName: catMeta?.displayName || name,
 				objectCount: tag.objects.length,
 				cover: first
 					? {
@@ -523,11 +527,14 @@ export async function listPublicCategoryObjects(
 	items: PublicObject[];
 	total: number;
 	categoryId: string | null;
+	displayName: string;
 }> {
 	const db = createPrismaClient();
 	const tagName = `${CATEGORY_PREFIX}${categoryName}`;
 	const tag = await db.tag.findUnique({ where: { name: tagName } });
-	if (!tag) return { items: [], total: 0, categoryId: null };
+	if (!tag)
+		return { items: [], total: 0, categoryId: null, displayName: categoryName };
+	const catMeta = tag.metadata as CategoryMetadata | null;
 
 	const where = {
 		deleted_at: null,
@@ -581,13 +588,17 @@ export async function listPublicCategoryObjects(
 		}),
 		total,
 		categoryId: tag.id,
+		displayName: catMeta?.displayName || categoryName,
 	};
 }
 
 /** List the latest public objects across all categories (for hero/featured). */
-export async function listFeaturedPublicObjects(
-	limit = 5,
-): Promise<(PublicObject & { category: string | null })[]> {
+export async function listFeaturedPublicObjects(limit = 5): Promise<
+	(PublicObject & {
+		category: string | null;
+		categoryDisplayName: string | null;
+	})[]
+> {
 	const db = createPrismaClient();
 	const rows = await db.object.findMany({
 		where: {
@@ -612,6 +623,10 @@ export async function listFeaturedPublicObjects(
 
 	return rows.map((r) => {
 		const categoryTag = r.tags.find((t) => t.name.startsWith(CATEGORY_PREFIX));
+		const catMeta = categoryTag?.metadata as CategoryMetadata | null;
+		const categoryName = categoryTag
+			? categoryTag.name.slice(CATEGORY_PREFIX.length)
+			: null;
 		const creators = r.tags
 			.filter((t) => t.name.startsWith(CREATOR_PREFIX))
 			.map((t) => ({
@@ -625,9 +640,8 @@ export async function listFeaturedPublicObjects(
 			id: r.id,
 			path: r.path,
 			metadata: r.metadata as PublicObject["metadata"],
-			category: categoryTag
-				? categoryTag.name.slice(CATEGORY_PREFIX.length)
-				: null,
+			category: categoryName,
+			categoryDisplayName: catMeta?.displayName || categoryName,
 			creators,
 			userTags,
 		};
