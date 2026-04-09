@@ -22,8 +22,8 @@
     },
   ],
   "vars": {
-    "APP_NAME": "",
-    "LINKS_FACEBOOK": "",
+    "APP_NAME": "陽獸 Elton",
+    "LINKS_FACEBOOK": "https://www.facebook.com/elton.fur/",
     "LINKS_X": "",
     "LINKS_GITHUB": "https://github.com/jr-dragon/glint",
     "CF_ACCESS_TEAM_DOMAIN": "chivincent",
