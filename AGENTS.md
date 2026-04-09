@@ -48,3 +48,4 @@ src/
 - Biome is configured to skip `routeTree.gen.ts`, `styles.css`, and `components/ui`
 - Use Biome for formatting (tabs, double quotes) — do not use Prettier
 - Run `bun run check --fix` before committing to ensure code style consistency
+- **Design Policy**: The immersive curation strategy defined in `DESIGN.md` applies **only** to the public-facing user interface. Administrative routes under `/admin` must use standard, functional UI components (shadcn/ui defaults) without the editorial styling, glassmorphism, or tonal layering described in the design system.
