@@ -513,10 +513,11 @@ function FileNameEditor({
 	return (
 		<button
 			type="button"
-			className="group/name flex min-w-0 items-center gap-1 text-left"
+			className="group/name flex w-full min-w-0 items-center gap-1 text-left"
+			title={name}
 			onClick={startEdit}
 		>
-			<span className="truncate text-sm font-medium">{name}</span>
+			<span className="min-w-0 truncate text-sm font-medium">{name}</span>
 			<PencilIcon className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/name:opacity-100" />
 		</button>
 	);
