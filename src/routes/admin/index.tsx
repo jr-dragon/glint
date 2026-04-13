@@ -196,6 +196,14 @@ const bindCategoryFn = createServerFn({ method: "POST" })
 		await bindObjectToCategory(data.objectId, data.categoryId);
 	});
 
+const batchDeleteFileFn = createServerFn({ method: "POST" })
+	.inputValidator(z.object({ ids: z.array(z.string()) }))
+	.handler(async ({ data }) => {
+		for (const id of data.ids) {
+			await deleteFile(id);
+		}
+	});
+
 const batchBindCategoryFn = createServerFn({ method: "POST" })
 	.inputValidator(
 		z.object({ objectIds: z.array(z.string()), categoryId: z.string() }),
@@ -873,11 +881,13 @@ function BatchActionBar({
 	allCategories,
 	allCreators,
 	onDone,
+	onBatchDelete,
 }: {
 	selectedIds: Set<string>;
 	allCategories: CategoryRecord[];
 	allCreators: CreatorRecord[];
 	onDone: () => void;
+	onBatchDelete: () => void;
 }) {
 	const router = useRouter();
 	const [catOpen, setCatOpen] = useState(false);
@@ -1019,7 +1029,7 @@ function BatchActionBar({
 				>
 					<PopoverTrigger asChild>
 						<Button variant="outline" size="sm" disabled={loading}>
-							批次創作者
+							批次加入創作者
 						</Button>
 					</PopoverTrigger>
 					<PopoverContent className="w-52 p-0" align="start">
@@ -1066,15 +1076,20 @@ function BatchActionBar({
 			{loading && (
 				<LoaderCircleIcon className="size-4 animate-spin text-muted-foreground" />
 			)}
-			<Button
-				variant="ghost"
-				size="sm"
-				className="ml-auto"
-				onClick={onDone}
-				disabled={loading}
-			>
-				取消選取
-			</Button>
+			<div className="ml-auto flex items-center gap-2">
+				<Button
+					variant="destructive"
+					size="sm"
+					disabled={loading}
+					onClick={onBatchDelete}
+				>
+					<Trash2Icon className="size-3.5" />
+					移至回收站
+				</Button>
+				<Button variant="ghost" size="sm" onClick={onDone} disabled={loading}>
+					取消選取
+				</Button>
+			</div>
 		</div>
 	);
 }
@@ -1099,10 +1114,12 @@ function AdminPage() {
 	const [dragging, setDragging] = useState(false);
 	const [uploading, setUploading] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState<FileRecord | null>(null);
+	const [batchDeletePending, setBatchDeletePending] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const uploadFn = useServerFn(uploadFileFn);
 	const renameFn = useServerFn(renameFileFn);
 	const deleteFn = useServerFn(deleteFileFn);
+	const batchDeleteFn = useServerFn(batchDeleteFileFn);
 
 	function handleTagsChange(fileId: string, tags: TagRecord[]) {
 		setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, tags } : f)));
@@ -1168,6 +1185,14 @@ function AdminPage() {
 		await deleteFn({ data: { id: deleteTarget.id } });
 		setFiles((prev) => prev.filter((f) => f.id !== deleteTarget.id));
 		setDeleteTarget(null);
+	}
+
+	async function handleBatchDelete() {
+		const ids = Array.from(selected);
+		await batchDeleteFn({ data: { ids } });
+		setFiles((prev) => prev.filter((f) => !selected.has(f.id)));
+		setBatchDeletePending(false);
+		clearSelection();
 	}
 
 	function handleInputChange(e: ChangeEvent<HTMLInputElement>) {
@@ -1278,6 +1303,7 @@ function AdminPage() {
 					allCategories={categories}
 					allCreators={creators}
 					onDone={clearSelection}
+					onBatchDelete={() => setBatchDeletePending(true)}
 				/>
 			)}
 
@@ -1379,22 +1405,46 @@ function AdminPage() {
 
 			<PaginationBar page={page} totalPages={totalPages} />
 
-			{/* Delete Confirmation */}
+			{/* Single Delete Confirmation */}
 			<AlertDialog
 				open={!!deleteTarget}
 				onOpenChange={(open) => !open && setDeleteTarget(null)}
 			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>確認刪除</AlertDialogTitle>
+						<AlertDialogTitle>移至回收站</AlertDialogTitle>
 						<AlertDialogDescription>
-							即將刪除「{deleteTarget?.metadata.originalName}
-							」，此操作無法復原。確定要繼續嗎？
+							即將將「{deleteTarget?.metadata.originalName}
+							」移至回收站。您可以在回收站中還原或永久刪除此檔案。
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel>取消</AlertDialogCancel>
-						<AlertDialogAction onClick={handleDelete}>刪除</AlertDialogAction>
+						<AlertDialogAction onClick={handleDelete}>
+							移至回收站
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* Batch Delete Confirmation */}
+			<AlertDialog
+				open={batchDeletePending}
+				onOpenChange={(open) => !open && setBatchDeletePending(false)}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>批次移至回收站</AlertDialogTitle>
+						<AlertDialogDescription>
+							即將將已選取的 {selected.size}{" "}
+							個檔案移至回收站。您可以在回收站中還原或永久刪除這些檔案。
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>取消</AlertDialogCancel>
+						<AlertDialogAction onClick={handleBatchDelete}>
+							移至回收站
+						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
