@@ -7,6 +7,7 @@ const navItems = [
 	{ to: "/admin", label: "總覽" },
 	{ to: "/admin/category", label: "分類管理" },
 	{ to: "/admin/creator", label: "創作者管理" },
+	{ to: "/admin/trash", label: "回收站" },
 ] as const;
 
 export default function AdminHeader({ appName }: { appName: string }) {
