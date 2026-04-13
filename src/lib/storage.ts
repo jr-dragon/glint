@@ -63,6 +63,39 @@ export async function deleteFile(id: string): Promise<void> {
 	});
 }
 
+export async function restoreFile(id: string): Promise<void> {
+	const db = createPrismaClient();
+	await db.object.update({
+		where: { id },
+		data: { deleted_at: null },
+	});
+}
+
+export async function permanentlyDeleteFile(id: string): Promise<void> {
+	const db = createPrismaClient();
+	const record = await db.object.findUnique({ where: { id } });
+	if (!record) throw new Error("File not found");
+
+	await env.STORAGE.delete(record.path);
+	await db.object.delete({ where: { id } });
+}
+
+export async function listDeletedFiles(page = 1, perPage = 12) {
+	const db = createPrismaClient();
+	const where = { deleted_at: { not: null } };
+	const [items, total] = await Promise.all([
+		db.object.findMany({
+			where,
+			orderBy: { deleted_at: "desc" },
+			include: { tags: true },
+			skip: (page - 1) * perPage,
+			take: perPage,
+		}),
+		db.object.count({ where }),
+	]);
+	return { items, total };
+}
+
 export async function listFiles(page = 1, perPage = 12) {
 	const db = createPrismaClient();
 	const where = { deleted_at: null };

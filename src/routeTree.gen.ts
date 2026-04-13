@@ -13,6 +13,7 @@ import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as CategoryCategoryNameRouteImport } from './routes/category.$categoryName'
+import { Route as AdminTrashRouteImport } from './routes/admin/trash'
 import { Route as AdminCreatorRouteImport } from './routes/admin/creator'
 import { Route as AdminCategoryRouteImport } from './routes/admin/category'
 
@@ -36,6 +37,11 @@ const CategoryCategoryNameRoute = CategoryCategoryNameRouteImport.update({
   path: '/category/$categoryName',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminTrashRoute = AdminTrashRouteImport.update({
+  id: '/trash',
+  path: '/trash',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminCreatorRoute = AdminCreatorRouteImport.update({
   id: '/creator',
   path: '/creator',
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/admin/category': typeof AdminCategoryRoute
   '/admin/creator': typeof AdminCreatorRoute
+  '/admin/trash': typeof AdminTrashRoute
   '/category/$categoryName': typeof CategoryCategoryNameRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/category': typeof AdminCategoryRoute
   '/admin/creator': typeof AdminCreatorRoute
+  '/admin/trash': typeof AdminTrashRoute
   '/category/$categoryName': typeof CategoryCategoryNameRoute
   '/admin': typeof AdminIndexRoute
 }
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteRouteWithChildren
   '/admin/category': typeof AdminCategoryRoute
   '/admin/creator': typeof AdminCreatorRoute
+  '/admin/trash': typeof AdminTrashRoute
   '/category/$categoryName': typeof CategoryCategoryNameRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin/category'
     | '/admin/creator'
+    | '/admin/trash'
     | '/category/$categoryName'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
@@ -85,6 +95,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/category'
     | '/admin/creator'
+    | '/admin/trash'
     | '/category/$categoryName'
     | '/admin'
   id:
@@ -93,6 +104,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin/category'
     | '/admin/creator'
+    | '/admin/trash'
     | '/category/$categoryName'
     | '/admin/'
   fileRoutesById: FileRoutesById
@@ -133,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CategoryCategoryNameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/trash': {
+      id: '/admin/trash'
+      path: '/trash'
+      fullPath: '/admin/trash'
+      preLoaderRoute: typeof AdminTrashRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/creator': {
       id: '/admin/creator'
       path: '/creator'
@@ -153,12 +172,14 @@ declare module '@tanstack/react-router' {
 interface AdminRouteRouteChildren {
   AdminCategoryRoute: typeof AdminCategoryRoute
   AdminCreatorRoute: typeof AdminCreatorRoute
+  AdminTrashRoute: typeof AdminTrashRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminCategoryRoute: AdminCategoryRoute,
   AdminCreatorRoute: AdminCreatorRoute,
+  AdminTrashRoute: AdminTrashRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
